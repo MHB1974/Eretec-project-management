@@ -2569,15 +2569,16 @@
     if (configMissing()) { $("nmStatus").className = "status show err"; $("nmStatus").textContent = "Firebase 키가 설정되지 않아 저장할 수 없습니다."; return; }
     try {
       $("nmSave").textContent = "등록 중…"; $("nmSave").disabled = true;
-      await addDoc(collection(db, "notices"), {
+      await addDoc(collection(db, "notices"), stripUndefined({
         title, body, pinned: $("nmPin").checked,
         authorName: CURRENT_USER?.displayName || "관리자",
         authorUid: CURRENT_USER?.uid || "",
         createdAt: serverTimestamp(),
-      });
+      }));
       closeModal("noticeModal");
       ALL_NOTICES = await safeGetDocs(query(collection(db, "notices"), orderBy("createdAt", "desc"))) || [];
       drawNotices();
+      renderNotices(ALL_NOTICES.slice(0, 5));   // 홈 화면 공지 카드도 갱신
     } catch (e) {
       $("nmStatus").className = "status show err"; $("nmStatus").textContent = "저장 실패: " + e.message;
     } finally {
@@ -3045,9 +3046,9 @@
     try {
       $("pmSave").textContent = editingProjectId ? "수정 중…" : "저장 중…"; $("pmSave").disabled = true;
       if (editingProjectId) {
-        await setDoc(doc(db, "projects", editingProjectId), data, { merge: true });
+        await setDoc(doc(db, "projects", editingProjectId), stripUndefined(data), { merge: true });
       } else {
-        await addDoc(collection(db, "projects"), { ...data, designTasks: makeDefaultTasks(), createdAt: serverTimestamp() });
+        await addDoc(collection(db, "projects"), stripUndefined({ ...data, designTasks: makeDefaultTasks(), createdAt: serverTimestamp() }));
       }
       closeModal("projModal");
       const projects = await safeGetDocs(collection(db, "projects"));
@@ -3420,9 +3421,9 @@
       p.startDate = sd ? Timestamp.fromDate(new Date(sd)) : null;
       p.dueDate = dd ? Timestamp.fromDate(new Date(dd)) : null;
       try {
-        await setDoc(doc(db, "projects", pid), {
+        await setDoc(doc(db, "projects", pid), stripUndefined({
           ...meta, startDate: p.startDate, dueDate: p.dueDate,
-        }, { merge: true });
+        }), { merge: true });
       } catch (e) { alert("저장 실패: " + e.message); return; }
     }
     if (wp) { wp.startDate = p.startDate; wp.dueDate = p.dueDate; }
@@ -3566,12 +3567,35 @@
     renderProjects(ALL_PROJECTS); renderStats(ALL_PROJECTS);
   });
 
+  // Firestore는 undefined 값을 거부하므로, 저장 전에 undefined를 모두 제거한다.
+  // 단, Timestamp·serverTimestamp 등 Firestore 특수 객체는 그대로 보존한다.
+  function stripUndefined(v) {
+    if (v === null) return null;
+    if (Array.isArray(v)) return v.map(stripUndefined);
+    if (v && typeof v === "object") {
+      // Firestore 특수 객체(Timestamp, FieldValue 등)는 순회하지 않고 그대로 둔다
+      const ctor = v.constructor && v.constructor.name;
+      if (typeof v.toDate === "function" || v._methodName || (ctor && ctor !== "Object")) return v;
+      const out = {};
+      for (const k in v) {
+        if (v[k] === undefined) continue;        // undefined 필드는 통째로 생략
+        out[k] = stripUndefined(v[k]);
+      }
+      return out;
+    }
+    return v;
+  }
+
   async function saveProjectTasks(p) {
     if (DEMO_MODE) return; // 메모리 반영만
     if (configMissing()) return;
     try {
-      await setDoc(doc(db, "projects", p.id), { designTasks: p.designTasks || [] }, { merge: true });
-    } catch (e) { console.warn("일정 저장 실패:", e.message); }
+      const clean = stripUndefined(p.designTasks || []);
+      await setDoc(doc(db, "projects", p.id), { designTasks: clean }, { merge: true });
+    } catch (e) {
+      console.warn("일정 저장 실패:", e.message);
+      alert("일정 저장 실패: " + e.message);
+    }
   }
 
   async function deleteProjectAndRefresh(id) {
