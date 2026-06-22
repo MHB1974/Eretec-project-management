@@ -1028,14 +1028,17 @@
     <main class="main view-panel" id="viewSuggestion" style="display:none;">
       <div class="main-head">
         <h1>기타 건의 및 제안</h1>
-        <div class="date">누구나 익명으로 작성 가능합니다</div>
+        <div class="date">팀원들의 소중한 의견을 들려주세요</div>
       </div>
       
-      <!-- 작성 폼 -->
-      <div style="margin-bottom:30px; padding:20px; background:var(--panel); border-radius:12px; border:1px solid var(--line);">
-        <h3 style="margin-top:0;font-size:14px;color:var(--text-dim);">새 제안 작성</h3>
-        <div style="margin-bottom:14px;padding:12px;background:var(--deep-2);border-radius:8px;font-size:12px;color:var(--text-dim);">
-          ℹ️ 로그인한 계정으로 작성되며, 팀원들과 공유됩니다.
+      <!-- 새 제안 작성 버튼 (폭 30%) -->
+      <button class="submit" id="sugNewBtn" style="font-size:14px;padding:12px;margin-bottom:20px;width:30%;min-width:180px;">+ 새 제안 작성</button>
+
+      <!-- 작성 카드 (숨김, 버튼 클릭 시 표시) -->
+      <div id="sugWriteCard" style="display:none;margin-bottom:20px;padding:20px;background:var(--panel);border-radius:12px;border:1px solid var(--accent);">
+        <h3 style="margin-top:0;font-size:14px;color:var(--accent);">새 제안 작성</h3>
+        <div id="sugLoginAlert" style="display:none;margin-bottom:14px;padding:12px;background:var(--deep-2);border-radius:8px;font-size:12px;color:#f59e42;">
+          ⚠️ 로그인 후 저장할 수 있습니다.
         </div>
         <div class="field" style="margin-bottom:14px;">
           <label>제목</label>
@@ -1045,7 +1048,10 @@
           <label>내용</label>
           <textarea id="sugContent" placeholder="구체적인 내용을 입력하세요" style="font-size:14px;min-height:120px;"></textarea>
         </div>
-        <button class="submit" id="sugSaveBtn" style="font-size:14px;padding:12px;">제안 제출</button>
+        <div style="display:flex;gap:10px;justify-content:flex-end;">
+          <button id="sugCancelBtn" style="padding:10px 22px;background:transparent;color:var(--text-dim);border:1px solid var(--line);border-radius:9px;cursor:pointer;font-size:13px;font-weight:600;">취소</button>
+          <button id="sugSaveBtn" style="padding:10px 24px;background:var(--accent);color:#06231a;border:none;border-radius:9px;cursor:pointer;font-size:13px;font-weight:700;">저장</button>
+        </div>
       </div>
 
       <!-- 제안 목록 -->
@@ -2100,12 +2106,6 @@
     </div>`;
   }
 
-  function showSuggestionView() {
-    if (!CURRENT_USER) { showView("home"); alert("로그인 후 이용 가능합니다."); return; }
-    showView("suggestion");
-    loadSuggestions();
-  }
-
   function renderStats(projects) {
     if (!projects) { ["stRun","stDue","stLate","stDone"].forEach(id => $(id).innerHTML = "—"); return; }
     let run=0, due=0, late=0, done=0;
@@ -2234,7 +2234,7 @@
         if (boardBtn) boardBtn.click();
         return;
       }
-      if (v === "home" || v === "calendar" || v === "notice" || v === "weekly" || v === "weeklyboard" || v === "project" || v === "projectboard" || v === "members" || v === "stats") {
+      if (v === "home" || v === "calendar" || v === "notice" || v === "weekly" || v === "weeklyboard" || v === "project" || v === "projectboard" || v === "members" || v === "stats" || v === "suggestion") {
         document.querySelectorAll(".nav button").forEach(b => b.classList.toggle("active", b === btn));
         showView(v);
         if (v === "calendar") setCalScope(calScope);
@@ -2245,6 +2245,7 @@
         if (v === "projectboard") openProjectBoard();
         if (v === "members") openMembersView();
         if (v === "stats") openStatsView();
+        if (v === "suggestion") openSuggestionView();
         closeDrawer();
         return;
       }
@@ -4013,9 +4014,27 @@
     $("sugestionList").innerHTML = html || "<div style='color:var(--text-mute);text-align:center;padding:40px 20px;'>아직 제안이 없습니다.</div>";
   }
 
+  // 새 제안 작성 버튼
+  $("sugNewBtn")?.addEventListener("click", () => {
+    $("sugWriteCard").style.display = "block";
+    if (!CURRENT_USER) {
+      $("sugLoginAlert").style.display = "block";
+    } else {
+      $("sugLoginAlert").style.display = "none";
+    }
+    $("sugTitle").value = "";
+    $("sugContent").value = "";
+    $("sugTitle").focus();
+  });
+
+  // 취소 버튼
+  $("sugCancelBtn")?.addEventListener("click", () => {
+    $("sugWriteCard").style.display = "none";
+  });
+
   // 제안 저장
-  $("sugSaveBtn").addEventListener("click", async () => {
-    if (!CURRENT_USER) { alert("로그인이 필요합니다."); return; }
+  $("sugSaveBtn")?.addEventListener("click", async () => {
+    if (!CURRENT_USER) { alert("로그인 후 저장할 수 있습니다."); return; }
     
     const title = $("sugTitle").value.trim();
     const content = $("sugContent").value.trim();
@@ -4032,9 +4051,10 @@
         authorName: CURRENT_USER.displayName || "익명",
         createdAt: serverTimestamp()
       });
-      alert("제안이 제출되었습니다. 감사합니다!");
+      alert("제안이 저장되었습니다. 감사합니다!");
       $("sugTitle").value = "";
       $("sugContent").value = "";
+      $("sugWriteCard").style.display = "none";
       loadSuggestions();
     } catch (e) { alert("저장 실패: " + e.message); }
   });
