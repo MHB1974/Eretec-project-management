@@ -2231,6 +2231,13 @@
 
   // 안드로이드/브라우저 뒤로가기 처리
   window.addEventListener("popstate", (e) => {
+    // 드로어(모바일 사이드 메뉴)가 열려 있으면 먼저 닫기
+    if ($("sideNav")?.classList.contains("open")) {
+      closeDrawer();
+      // history를 다시 한 칸 앞으로 (드로어 닫기를 히스토리에서 소비)
+      try { history.pushState({ view: CURRENT_VIEW || "home" }, "", "#" + (CURRENT_VIEW || "home")); } catch(e2) {}
+      return;
+    }
     const view = (e.state && e.state.view) || "home";
     // 메뉴 활성 표시도 갱신
     document.querySelectorAll(".nav button").forEach(b => {
@@ -2254,7 +2261,11 @@
   try { history.replaceState({ view: "home" }, "", "#home"); } catch(e) {}
   // 햄버거 드로어 제어
   function isMobile() { return window.matchMedia("(max-width: 900px)").matches; }
-  function openDrawer() { $("sideNav").classList.add("open"); $("drawerBackdrop").classList.add("show"); }
+  function openDrawer() {
+    $("sideNav").classList.add("open"); $("drawerBackdrop").classList.add("show");
+    // 안드로이드 뒤로가기로 드로어 닫기 위해 history에 임시 상태 추가
+    try { history.pushState({ view: CURRENT_VIEW || "home", drawer: true }, "", ""); } catch(e) {}
+  }
   function closeDrawer() { $("sideNav").classList.remove("open"); $("drawerBackdrop").classList.remove("show"); }
   $("mBurger")?.addEventListener("click", openDrawer);
   $("drawerBackdrop")?.addEventListener("click", closeDrawer);
@@ -2376,7 +2387,7 @@
 
   // 출장/외근/연차 종류별 아이콘·색상
   function tripIcon(type) { return ""; }   // 아이콘 미사용
-  function tripColor(type) { return type === "외근" ? "#1e7a4f" : type === "연차" ? "#d63384" : "#ff9f43"; }  // 출장=주황, 외근=진녹색, 연차=진분홍
+  function tripColor(type) { return type === "외근" ? "#1e3a8a" : type === "연차" ? "#4c1d95" : "#ff9f43"; }  // 출장=주황, 외근=남색, 연차=어두운 보라
   // 출장 배경색에 어울리는 글자색 (밝은 배경=어두운 글자, 어두운 배경=흰 글자)
   function tripTextColor(type) { return type === "외근" || type === "연차" ? "#fff" : "#1a1200"; }
 
@@ -2434,7 +2445,7 @@
 
   // 범례 갱신
   function renderLegend() {
-    const base = `<span><i class="dot-due"></i> 프로젝트 납기</span><span><i class="dot-start"></i> 프로젝트 시작</span><span><i style="background:#ff9f43"></i> 출장</span><span><i style="background:#1e7a4f"></i> 외근</span><span><i style="background:#d63384"></i> 연차</span>`;
+    const base = `<span><i class="dot-due"></i> 프로젝트 납기</span><span><i class="dot-start"></i> 프로젝트 시작</span><span><i style="background:#ff9f43"></i> 출장</span><span><i style="background:#1e3a8a"></i> 외근</span><span><i style="background:#4c1d95"></i> 연차</span>`;
     if (calScope === "team") {
       const seen = new Set();
       const uids = (TEAM_WEEKLY_CACHE || []).map(p => p.uid).filter(u => { if (seen.has(u)) return false; seen.add(u); return true; });
