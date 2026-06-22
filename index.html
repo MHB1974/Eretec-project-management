@@ -82,6 +82,9 @@
   .field { margin-bottom: 14px; }
   .field label { display: block; font-size: 12px; color: var(--text-dim); margin-bottom: 7px; letter-spacing: 0.03em; }
   .field input { width: 100%; padding: 13px 15px; background: var(--panel); border: 1px solid var(--line); border-radius: 10px; color: var(--text); font-family: var(--font-body); font-size: 14px; transition: border-color .2s; }
+  .field textarea { width: 100%; padding: 13px 15px; background: var(--panel); border: 1px solid var(--line); border-radius: 10px; color: var(--text); font-family: var(--font-body); font-size: 14px; transition: border-color .2s; resize: vertical; line-height: 1.6; box-sizing: border-box; }
+  .field textarea:focus { outline: none; border-color: var(--accent); }
+  .field textarea::placeholder { color: var(--text-mute); }
   .field input:focus { outline: none; border-color: var(--accent); }
   .field input::placeholder { color: var(--text-mute); }
   .name-field { display: none; }
@@ -3825,18 +3828,41 @@
   }
 
   function renderSuggestions() {
-    const html = ALL_SUGGESTIONS.map(sug => `
+    const isAdmin = CURRENT_ROLE === "admin";
+    const html = ALL_SUGGESTIONS.map(sug => {
+      const dt = sug.createdAt?.toDate ? sug.createdAt.toDate() : new Date(sug.createdAt || Date.now());
+      const dateStr = dt.toLocaleDateString("ko-KR");
+      const delBtn = isAdmin ? `<button data-sug-del="${sug.id}" style="background:transparent;border:none;color:var(--text-mute);cursor:pointer;font-size:16px;padding:4px 8px;" title="삭제">🗑</button>` : "";
+      return `
       <div style="margin-bottom:16px;padding:16px;background:var(--panel);border-radius:10px;border:1px solid var(--line);">
         <div style="display:flex;justify-content:space-between;align-items:start;margin-bottom:8px;">
           <div style="flex:1;">
             <h4 style="margin:0;font-size:14px;color:var(--text);">${esc(sug.title||"제목 없음")}</h4>
-            <div style="font-size:11px;color:var(--text-mute);margin-top:4px;">${esc(sug.authorName||"익명")} · ${new Date(sug.createdAt?.toDate?.() || sug.createdAt).toLocaleDateString('ko-KR')}</div>
+            <div style="font-size:11px;color:var(--text-mute);margin-top:4px;">익명 · ${dateStr}</div>
           </div>
+          ${delBtn}
         </div>
         <div style="font-size:13px;color:var(--text-dim);line-height:1.6;white-space:pre-wrap;">${esc(sug.content||"")}</div>
-      </div>
-    `).join("");
+      </div>`;
+    }).join("");
     $("sugestionList").innerHTML = html || "<div style='color:var(--text-mute);text-align:center;padding:40px 20px;'>아직 제안이 없습니다.</div>";
+
+    // 삭제 버튼 이벤트 위임
+    $("sugestionList").querySelectorAll("[data-sug-del]").forEach(btn => {
+      btn.addEventListener("click", async () => {
+        if (!confirm("이 제안을 삭제하시겠습니까?")) return;
+        const id = btn.getAttribute("data-sug-del");
+        if (DEMO_MODE) {
+          ALL_SUGGESTIONS = ALL_SUGGESTIONS.filter(x => x.id !== id);
+          renderSuggestions();
+          return;
+        }
+        try {
+          await deleteDoc(doc(db, "suggestions", id));
+          await loadSuggestions();
+        } catch (e) { alert("삭제 실패: " + e.message); }
+      });
+    });
   }
 
   // 새 제안 작성 버튼
