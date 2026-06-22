@@ -2206,7 +2206,10 @@
   }
 
   // 네비/바로가기
-  function showView(view) {
+  // 현재 활성 뷰 추적 (뒤로가기 지원)
+  let CURRENT_VIEW = "home";
+
+  function showView(view, isPop) {
     document.querySelectorAll(".view-panel").forEach(p => p.style.display = "none");
     const panel = view === "calendar" ? $("viewCalendar")
                 : view === "notice"   ? $("viewNotice")
@@ -2219,7 +2222,36 @@
                 : view === "suggestion" ? $("viewSuggestion")
                 : $("viewHome");
     panel.style.display = "";
+    CURRENT_VIEW = view;
+    // popstate(뒤로가기)로 호출된 게 아니면 history에 새 상태 추가
+    if (!isPop) {
+      try { history.pushState({ view }, "", "#" + view); } catch(e) {}
+    }
   }
+
+  // 안드로이드/브라우저 뒤로가기 처리
+  window.addEventListener("popstate", (e) => {
+    const view = (e.state && e.state.view) || "home";
+    // 메뉴 활성 표시도 갱신
+    document.querySelectorAll(".nav button").forEach(b => {
+      b.classList.toggle("active", b.dataset.view === view);
+    });
+    showView(view, true);
+    // 해당 뷰의 데이터 로드
+    if (view === "calendar") setCalScope(calScope);
+    else if (view === "notice") renderNoticePage();
+    else if (view === "weekly") openWeekly();
+    else if (view === "weeklyboard") openWeeklyBoard();
+    else if (view === "project") openProjectEdit();
+    else if (view === "projectboard") openProjectBoard();
+    else if (view === "members") openMembersView();
+    else if (view === "stats") openStatsView();
+    else if (view === "suggestion") openSuggestionView();
+    closeDrawer();
+  });
+
+  // 페이지 첫 진입 시 초기 history 상태 설정
+  try { history.replaceState({ view: "home" }, "", "#home"); } catch(e) {}
   // 햄버거 드로어 제어
   function isMobile() { return window.matchMedia("(max-width: 900px)").matches; }
   function openDrawer() { $("sideNav").classList.add("open"); $("drawerBackdrop").classList.add("show"); }
@@ -2344,9 +2376,9 @@
 
   // 출장/외근/연차 종류별 아이콘·색상
   function tripIcon(type) { return ""; }   // 아이콘 미사용
-  function tripColor(type) { return type === "외근" ? "#2bb8a8" : type === "연차" ? "#f5c542" : "#ff9f43"; }  // 출장=주황, 외근=청록, 연차=노랑
+  function tripColor(type) { return type === "외근" ? "#1e7a4f" : type === "연차" ? "#d63384" : "#ff9f43"; }  // 출장=주황, 외근=진녹색, 연차=진분홍
   // 출장 배경색에 어울리는 글자색 (밝은 배경=어두운 글자, 어두운 배경=흰 글자)
-  function tripTextColor(type) { return type === "외근" ? "#fff" : "#1a1200"; }
+  function tripTextColor(type) { return type === "외근" || type === "연차" ? "#fff" : "#1a1200"; }
 
   // 날짜별 이벤트 수집
   function collectEvents() {
@@ -2402,7 +2434,7 @@
 
   // 범례 갱신
   function renderLegend() {
-    const base = `<span><i class="dot-due"></i> 프로젝트 납기</span><span><i class="dot-start"></i> 프로젝트 시작</span><span><i style="background:#ff9f43"></i> 출장</span><span><i style="background:#2bb8a8"></i> 외근</span><span><i style="background:#f5c542"></i> 연차</span>`;
+    const base = `<span><i class="dot-due"></i> 프로젝트 납기</span><span><i class="dot-start"></i> 프로젝트 시작</span><span><i style="background:#ff9f43"></i> 출장</span><span><i style="background:#1e7a4f"></i> 외근</span><span><i style="background:#d63384"></i> 연차</span>`;
     if (calScope === "team") {
       const seen = new Set();
       const uids = (TEAM_WEEKLY_CACHE || []).map(p => p.uid).filter(u => { if (seen.has(u)) return false; seen.add(u); return true; });
