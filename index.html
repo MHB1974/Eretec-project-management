@@ -699,7 +699,7 @@
     <div class="brandmark">
       <div class="logo-glyph"></div>
       <div>
-        <div class="name">ERETEC · 이레테크</div>
+        <div class="name">ERETEC · 이레테크 <span style="display:inline-block;background:#f5a623;color:#1a1a1a;font-size:11px;font-weight:700;padding:3px 8px;border-radius:5px;letter-spacing:0.05em;margin-left:6px;vertical-align:middle;">BETA</span></div>
         <div class="sub">전자파 솔루션 설계팀</div>
       </div>
     </div>
@@ -786,7 +786,7 @@
         <div class="logo-glyph"></div>
         <div>
           <div class="nm">ERETEC 이레테크</div>
-          <div class="sb">설계팀 일정관리</div>
+          <div class="sb">설계팀 일정관리 <span style="display:inline-block;background:#f5a623;color:#1a1a1a;font-size:9px;font-weight:700;padding:2px 6px;border-radius:4px;letter-spacing:0.05em;margin-left:4px;vertical-align:middle;">BETA</span></div>
         </div>
       </div>
       <nav class="nav">
@@ -861,7 +861,7 @@
     <!-- 본문: 홈 -->
     <main class="main view-panel" id="viewHome">
       <div class="main-head">
-        <h1 id="greet">전자파 솔루션 1사업부 설계팀</h1>
+        <h1 id="greet">전자파 솔루션 1사업부 설계팀 <span style="display:inline-block;background:#f5a623;color:#1a1a1a;font-size:12px;font-weight:700;padding:4px 10px;border-radius:6px;letter-spacing:0.05em;margin-left:8px;vertical-align:middle;">BETA v0.9</span></h1>
         <div class="date" id="todayStr"></div>
       </div>
 
@@ -1603,7 +1603,7 @@
   async function initDashboard(user, role) {
     // 인사말 + 날짜
     const now = new Date();
-    $("greet").textContent = `전자파 솔루션 1사업부 설계팀 · ${user.displayName || "팀원"}님`;
+    $("greet").innerHTML = `전자파 솔루션 1사업부 설계팀 · ${esc(user.displayName || "팀원")}님 <span style="display:inline-block;background:#f5a623;color:#1a1a1a;font-size:12px;font-weight:700;padding:4px 10px;border-radius:6px;letter-spacing:0.05em;margin-left:8px;vertical-align:middle;">BETA v0.9</span>`;
     const wd = ["일","월","화","수","목","금","토"][now.getDay()];
     $("todayStr").textContent = `${now.getFullYear()}년 ${now.getMonth()+1}월 ${now.getDate()}일 (${wd}) · ${isoWeek(now)}`;
 
@@ -3792,7 +3792,7 @@
     $("userPhoto").src = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='40' height='40'%3E%3Crect width='40' height='40' fill='%2316273a'/%3E%3Ctext x='20' y='26' font-size='16' fill='%2357e09a' text-anchor='middle' font-family='sans-serif'%3E문%3C/text%3E%3C/svg%3E";
 
     const now = new Date();
-    $("greet").textContent = "전자파 솔루션 1사업부 설계팀 · 문형범님 (데모)";
+    $("greet").innerHTML = `전자파 솔루션 1사업부 설계팀 · 문형범님 (데모) <span style="display:inline-block;background:#f5a623;color:#1a1a1a;font-size:12px;font-weight:700;padding:4px 10px;border-radius:6px;letter-spacing:0.05em;margin-left:8px;vertical-align:middle;">BETA v0.9</span>`;
     const wd = ["일","월","화","수","목","금","토"][now.getDay()];
     $("todayStr").textContent = `${now.getFullYear()}년 ${now.getMonth()+1}월 ${now.getDate()}일 (${wd})`;
 
