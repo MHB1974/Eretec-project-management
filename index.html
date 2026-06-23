@@ -563,14 +563,10 @@
 
   .stat-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin-bottom: 24px; }
   .stat { background: var(--deep-2); border: 1px solid var(--line); border-radius: 13px; padding: 18px; position: relative; overflow: hidden; }
-  .stat .k { font-size: 12px; color: var(--text-dim); letter-spacing: 0.04em; background: transparent; }
-  .stat .v { font-family: var(--font-display); font-size: 30px; font-weight: 600; margin-top: 8px; line-height: 1; background: transparent; }
-  .stat .u { font-size: 13px; color: var(--text-mute); margin-left: 4px; }
-  .stat::after { display: none; }
-  .stat.s-run::after { background: var(--accent); }
-  .stat.s-due::after { background: #f5b942; }
-  .stat.s-late::after { background: var(--danger); }
-  .stat.s-done::after { background: var(--blue); }
+  .stat .k { font-size: 12px; color: var(--text-dim); letter-spacing: 0.04em; background: transparent !important; background-color: transparent !important; }
+  .stat .v { font-family: var(--font-display); font-size: 30px; font-weight: 600; margin-top: 8px; line-height: 1; background: transparent !important; background-color: transparent !important; }
+  .stat .u { font-size: 13px; color: var(--text-mute); margin-left: 4px; background: transparent !important; }
+  .stat::after, .stat::before { display: none !important; content: none !important; }
   .stat.s-late .v { color: var(--danger); }
 
   .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
