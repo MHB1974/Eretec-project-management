@@ -58,27 +58,16 @@
 
   .brandmark { position: relative; z-index: 2; display: flex; align-items: center; gap: 14px; }
   .logo-glyph { 
-    width: 88px; height: 88px; 
-    border: 2px solid rgba(52, 216, 200, 0.5); 
-    border-radius: 18px; 
+    width: 90px; height: 90px; 
+    border: none;
+    border-radius: 0;
     display: grid; place-items: center; position: relative; flex-shrink:0; 
-    background: url('icons/logo-mark.png') center/85% no-repeat, rgba(255, 255, 255, 0.85); 
-    box-shadow: 
-      0 8px 20px rgba(0, 0, 0, 0.35),
-      0 2px 6px rgba(52, 216, 200, 0.25),
-      inset 0 1px 0 rgba(255, 255, 255, 0.6),
-      inset 0 -2px 4px rgba(0, 0, 0, 0.08);
-    backdrop-filter: blur(8px);
-    -webkit-backdrop-filter: blur(8px);
-    transition: transform .3s ease, box-shadow .3s ease;
+    background: url('icons/logo-mark.png') center/contain no-repeat;
+    transition: transform .4s ease, filter .4s ease;
   }
   .logo-glyph:hover {
-    transform: translateY(-2px) scale(1.03);
-    box-shadow: 
-      0 12px 28px rgba(0, 0, 0, 0.4),
-      0 4px 10px rgba(52, 216, 200, 0.35),
-      inset 0 1px 0 rgba(255, 255, 255, 0.7),
-      inset 0 -2px 4px rgba(0, 0, 0, 0.08);
+    transform: translateY(-4px) scale(1.06) rotate(-2deg);
+    filter: brightness(1.1) drop-shadow(0 0 25px rgba(120, 220, 255, 0.6));
   }
   .logo-glyph::before, .logo-glyph::after { display: none; }
   .logo-glyph::before { content:""; width: 17px; height: 17px; border: 1.5px solid var(--accent); border-radius: 50%; }
@@ -161,7 +150,7 @@
   .mtop-burger { background: var(--panel); border: 1px solid var(--line); border-radius: 9px; width: 40px; height: 40px; display: grid; place-items: center; color: var(--text); cursor: pointer; flex-shrink: 0; }
   .mtop-burger svg { width: 20px; height: 20px; }
   .mtop-brand { display: flex; align-items: center; gap: 9px; font-family: var(--font-display); font-weight: 600; font-size: 14px; letter-spacing: 0.04em; }
-  .mtop-brand .logo-glyph { width: 52px; height: 52px; border-radius: 12px; }
+  .mtop-brand .logo-glyph { width: 42px; height: 42px; border-radius: 0; }
   .dash.show { display: block; }
   .dash-top { display: flex; align-items: center; justify-content: space-between; padding-bottom: 24px; border-bottom: 1px solid var(--line); }
   .dash-user { display: flex; align-items: center; gap: 12px; }
@@ -177,10 +166,10 @@
   .shell { display: grid; grid-template-columns: 302px 1fr; min-height: 100vh; min-height: 100dvh; }
   .side { background: var(--deep-2); border-right: 1px solid var(--line); padding: 26px 18px; display: flex; flex-direction: column; }
   .side-brand { display: flex; align-items: center; gap: 11px; padding: 0 8px 24px; border-bottom: 1px solid var(--line); }
-  .side-brand .logo-glyph { width: 68px; height: 68px; border-radius: 15px; }
+  .side-brand .logo-glyph { width: 56px; height: 56px; border-radius: 0; }
   .side-brand .logo-glyph::before { width: 13px; height: 13px; }
-  .side-brand .nm { font-family: var(--font-display); font-weight: 600; font-size: 16px; letter-spacing: 0.08em; }
-  .side-brand .sb { font-size: 11px; color: var(--text-dim); letter-spacing: 0.12em; margin-top: 3px; }
+  .side-brand .nm { font-family: var(--font-display); font-weight: 600; font-size: 14px; letter-spacing: 0.08em; }
+  .side-brand .sb { font-size: 10px; color: var(--text-dim); letter-spacing: 0.12em; margin-top: 2px; }
   .nav { margin-top: 18px; display: flex; flex-direction: column; gap: 4px; }
   .nav button { display: flex; align-items: center; gap: 12px; padding: 11px 14px; border: none; background: transparent; color: var(--text-dim); font-family: var(--font-body); font-size: 14px; font-weight: 500; border-radius: 9px; cursor: pointer; text-align: left; transition: all .16s; }
   .nav button .nav-txt { display: flex; flex-direction: column; line-height: 1.25; }
