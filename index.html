@@ -63,11 +63,12 @@
     border-radius: 0;
     display: grid; place-items: center; position: relative; flex-shrink:0; 
     background: url('icons/logo-mark.png') center/contain no-repeat;
+    filter: drop-shadow(0 4px 10px rgba(0, 0, 0, 0.4)) drop-shadow(0 0 18px rgba(120, 200, 255, 0.35));
     transition: transform .4s ease, filter .4s ease;
   }
   .logo-glyph:hover {
     transform: translateY(-4px) scale(1.06) rotate(-2deg);
-    filter: brightness(1.1) drop-shadow(0 0 25px rgba(120, 220, 255, 0.6));
+    filter: brightness(1.1) drop-shadow(0 8px 18px rgba(0, 0, 0, 0.5)) drop-shadow(0 0 28px rgba(120, 220, 255, 0.6));
   }
   .logo-glyph::before, .logo-glyph::after { display: none; }
   .logo-glyph::before { content:""; width: 17px; height: 17px; border: 1.5px solid var(--accent); border-radius: 50%; }
@@ -561,8 +562,8 @@
 
   .stat-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin-bottom: 24px; }
   .stat { background: var(--deep-2); border: 1px solid var(--line); border-radius: 13px; padding: 18px; position: relative; overflow: hidden; }
-  .stat .k { font-size: 12px; color: var(--text-dim); letter-spacing: 0.04em; }
-  .stat .v { font-family: var(--font-display); font-size: 30px; font-weight: 600; margin-top: 8px; line-height: 1; }
+  .stat .k { font-size: 12px; color: var(--text-dim); letter-spacing: 0.04em; background: transparent; }
+  .stat .v { font-family: var(--font-display); font-size: 30px; font-weight: 600; margin-top: 8px; line-height: 1; background: transparent; }
   .stat .u { font-size: 13px; color: var(--text-mute); margin-left: 4px; }
   .stat::after { content:""; position: absolute; right: -10px; top: -10px; width: 54px; height: 54px; border-radius: 50%; opacity: 0.14; }
   .stat.s-run::after { background: var(--accent); }
