@@ -1,0 +1,32 @@
+{
+  "name": "이레테크 · 전자파 솔루션 1사업부 설계팀",
+  "short_name": "ERETEC 일정관리",
+  "description": "전자파 솔루션 1사업부 설계팀 일정 및 프로젝트 관리",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#0a1a14",
+  "theme_color": "#0a1a14",
+  "lang": "ko",
+  "icons": [
+    {
+      "src": "icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ]
+}
