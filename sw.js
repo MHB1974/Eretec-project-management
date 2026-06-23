@@ -1,5 +1,5 @@
 // ERETEC 일정관리 - Service Worker
-const CACHE_NAME = "eretec-v1.0.0";
+const CACHE_NAME = "eretec-v1.0.1";  // 버전 업: 옛 캐시 자동 삭제
 const CACHE_FILES = [
   "./",
   "./index.html",
@@ -28,25 +28,45 @@ self.addEventListener("activate", (event) => {
   self.clients.claim();
 });
 
-// 요청 처리: 정적 파일은 캐시 우선, 그 외(Firebase/외부 API)는 네트워크 우선
+// 요청 처리:
+// - HTML/이미지: 네트워크 우선 (Network First) - 최신 버전 항상 보여줌
+// - JS/CSS/manifest: 캐시 우선 (Cache First) - 빠른 로딩
 self.addEventListener("fetch", (event) => {
   const url = new URL(event.request.url);
   
-  // Firebase, Google API, CDN 등은 항상 네트워크로
+  // Firebase, Google API, CDN 등은 항상 네트워크로 (우리 도메인 외)
   if (url.origin !== location.origin) return;
   
-  // 같은 도메인의 정적 파일은 캐시 우선
-  event.respondWith(
-    caches.match(event.request).then((cached) => {
-      if (cached) return cached;
-      return fetch(event.request).then((response) => {
-        // 성공한 응답은 캐시에 저장
+  const isHTML = event.request.mode === "navigate" || url.pathname.endsWith(".html") || url.pathname === "/" || url.pathname.endsWith("/");
+  const isImage = /\.(png|jpg|jpeg|gif|svg|webp|ico)$/i.test(url.pathname);
+  
+  if (isHTML || isImage) {
+    // 네트워크 우선 - 최신 파일을 우선시
+    event.respondWith(
+      fetch(event.request).then((response) => {
         if (response.ok) {
-          const responseClone = response.clone();
-          caches.open(CACHE_NAME).then(cache => cache.put(event.request, responseClone));
+          const clone = response.clone();
+          caches.open(CACHE_NAME).then(cache => cache.put(event.request, clone));
         }
         return response;
-      }).catch(() => caches.match("./index.html"));  // 오프라인이면 홈 페이지 반환
-    })
-  );
+      }).catch(() => {
+        // 오프라인이면 캐시에서 가져옴
+        return caches.match(event.request).then(cached => cached || caches.match("./index.html"));
+      })
+    );
+  } else {
+    // 그 외 (JS, JSON 등) 캐시 우선
+    event.respondWith(
+      caches.match(event.request).then((cached) => {
+        if (cached) return cached;
+        return fetch(event.request).then((response) => {
+          if (response.ok) {
+            const clone = response.clone();
+            caches.open(CACHE_NAME).then(cache => cache.put(event.request, clone));
+          }
+          return response;
+        });
+      })
+    );
+  }
 });
