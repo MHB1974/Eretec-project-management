@@ -1435,6 +1435,18 @@
     catch (e) { showStatus(e.code === "auth/popup-closed-by-user" ? "로그인 창이 닫혔습니다." : "로그인 실패: " + e.message, "err"); }
   });
 
+  // 엔터키로 로그인 실행 (이메일/비밀번호/이름 입력칸 모두)
+  ["email", "pw", "dname"].forEach(id => {
+    const el = $(id);
+    if (!el) return;
+    el.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") {
+        e.preventDefault();
+        $("submitBtn")?.click();
+      }
+    });
+  });
+
   $("submitBtn").addEventListener("click", async () => {
     if (!auth || IS_LOCAL_FILE) return showStatus("로컬 파일에서는 로그인할 수 없습니다. 데모 미리보기를 이용하거나 웹에 배포 후 로그인하세요.", "err");
     if (configMissing()) return showStatus("Firebase 설정 키를 먼저 입력하세요 (firebaseConfig).", "err");
