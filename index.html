@@ -298,7 +298,9 @@
   .trip-row.pending-del { opacity: 0.45; text-decoration: line-through; }
 
   /* 주간업무 현황 보드 */
-  .wb-card { background: var(--deep-2); border: 1px solid var(--line); border-radius: 13px; padding: 18px 20px; margin-bottom: 12px;  box-shadow: 0 2px 12px rgba(0,0,0,0.28); }
+  #wbList { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; }
+  .wb-card { background: var(--deep-2); border: 1px solid var(--line); border-radius: 13px; padding: 18px 20px; margin-bottom: 0;  box-shadow: 0 2px 12px rgba(0,0,0,0.28); }
+  @media (max-width: 900px) { #wbList { grid-template-columns: 1fr; } }
   .wb-head { display: flex; align-items: center; gap: 11px; margin-bottom: 12px; }
   .wb-avatar { width: 34px; height: 34px; border-radius: 50%; background: var(--panel); display: grid; place-items: center; font-size: 13px; font-weight: 600; flex-shrink: 0; }
   .wb-name { font-size: 14px; font-weight: 600; }
