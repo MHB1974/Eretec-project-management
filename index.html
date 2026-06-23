@@ -1277,11 +1277,11 @@
     <label style="display:block;font-size:12px;color:var(--text-dim);margin-bottom:8px;">담당자 지정</label>
     <div class="field-row">
       <div class="field">
-        <label for="pmDesign1">설계 담당 1</label>
+        <label for="pmDesign1">설계1</label>
         <select id="pmDesign1" class="owner-sel"></select>
       </div>
       <div class="field">
-        <label for="pmDesign2">설계 담당 2</label>
+        <label for="pmDesign2">설계2</label>
         <select id="pmDesign2" class="owner-sel"></select>
       </div>
     </div>
@@ -3373,7 +3373,10 @@
         `<span class="own-name" style="color:${color}">${esc(memberNameRank(uid))}</span>`).join(" ");
       return `<span class="own-role" style="background:${color}">${label}</span> ${names}`;
     };
-    if (des.length) seg.push(part(ROLE_COLORS.design, "설계", des));
+    // 설계 담당자는 설계1, 설계2로 각각 구분 표시
+    des.forEach((uid, i) => {
+      seg.push(part(ROLE_COLORS.design, `설계${i + 1}`, [uid]));
+    });
     if (p.sales) seg.push(part(ROLE_COLORS.sales, "영업", [p.sales]));
     if (p.fieldOwner) seg.push(part(ROLE_COLORS.field, "현장", [p.fieldOwner]));
     return seg.join('<span class="own-sep">·</span>');
