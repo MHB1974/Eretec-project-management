@@ -202,6 +202,12 @@
   .nav-badge { margin-left: auto; width: 7px; height: 7px; padding: 0; border-radius: 50%; background: var(--accent); font-size: 0; color: transparent; flex-shrink: 0; align-self: center; }
   .nav-badge.warn { background: #f5b942; }
   .nav-badge.danger { background: var(--danger); }
+  .nav-badge.count { width: auto; min-width: 18px; height: 18px; padding: 0 6px; border-radius: 9px; font-size: 11px; font-weight: 700; color: #06231a; display: inline-flex; align-items: center; justify-content: center; }
+  .nav-badge.count.danger { color: #fff; }
+  /* 토스트 알림 */
+  #toastWrap { position: fixed; top: 18px; left: 50%; transform: translateX(-50%); z-index: 9999; display: flex; flex-direction: column; gap: 8px; align-items: center; pointer-events: none; width: max-content; max-width: 90vw; }
+  .toast { background: #1a2438; color: var(--text); border: 1px solid var(--accent); border-radius: 12px; padding: 13px 20px; font-size: 14px; font-weight: 600; box-shadow: 0 8px 28px rgba(0,0,0,0.45); opacity: 0; transform: translateY(-12px); transition: opacity .25s, transform .25s; pointer-events: auto; cursor: pointer; }
+  .toast.show { opacity: 1; transform: translateY(0); }
   .carry-tag { display: inline-block; margin-left: 8px; font-size: 10px; font-weight: 600; padding: 1px 6px; border-radius: 10px; background: rgba(245,185,66,0.18); color: #f5b942; vertical-align: middle; }
 
   /* 캘린더 */
@@ -857,6 +863,7 @@
 </div>
 
 <div class="dash" id="dashStage">
+<div id="toastWrap"></div>
   <!-- 모바일 상단바 (햄버거) -->
   <div class="mtop">
     <button class="mtop-burger" id="mBurger" aria-label="메뉴 열기">
@@ -884,7 +891,7 @@
         <button data-view="notice">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9M13.7 21a2 2 0 0 1-3.4 0" stroke-linecap="round" stroke-linejoin="round"/></svg>
           <span>공지사항</span>
-          <span class="nav-badge" id="badgeNotice" style="display:none;"></span>
+          <span class="nav-badge count danger" id="badgeNotice" style="display:none;"></span>
         </button>
         <button data-view="weekly">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18" stroke-linecap="round"/></svg>
@@ -1763,7 +1770,7 @@
       const snap = await getDoc(doc(db, "users", user.uid));
       if (snap.exists()) {
         const d = snap.data();
-        return { name: d.name || base.name, rank: d.rank || base.rank, email: d.email || base.email, role: d.role || role, status: d.status || "approved" };
+        return { name: d.name || base.name, rank: d.rank || base.rank, email: d.email || base.email, role: d.role || role, status: d.status || "approved", lastNoticeReadAt: d.lastNoticeReadAt || null };
       }
     } catch (e) { console.warn("프로필 로드 실패:", e.message); }
     return base;
@@ -1890,6 +1897,36 @@
   }
 
   /* ─── 알림 배지 ─── */
+  // 토스트 알림 (중복 방지)
+  let _toastShown = new Set();
+  function showToast(msg, opts = {}) {
+    const wrap = $("toastWrap");
+    if (!wrap) return;
+    // 같은 메시지 중복 방지 (한 세션에 한 번)
+    if (!opts.allowRepeat) {
+      if (_toastShown.has(msg)) return;
+      _toastShown.add(msg);
+    }
+    const t = document.createElement("div");
+    t.className = "toast";
+    t.textContent = msg;
+    t.addEventListener("click", () => { t.classList.remove("show"); setTimeout(() => t.remove(), 250); });
+    wrap.appendChild(t);
+    requestAnimationFrame(() => t.classList.add("show"));
+    setTimeout(() => { t.classList.remove("show"); setTimeout(() => t.remove(), 250); }, opts.duration || 6000);
+  }
+
+  // 공지 읽음 처리: 마지막 본 시각 저장 + 배지 제거
+  async function markNoticesRead() {
+    setBadge("badgeNotice", 0);
+    const now = new Date();
+    if (MY_PROFILE) MY_PROFILE.lastNoticeReadAt = now;
+    if (DEMO_MODE || configMissing() || !CURRENT_USER) return;
+    try {
+      await setDoc(doc(db, "users", CURRENT_USER.uid), { lastNoticeReadAt: Timestamp.fromDate(now) }, { merge: true });
+    } catch (e) { console.warn("공지 읽음 저장 실패:", e.message); }
+  }
+
   function setBadge(id, n, max = 99) {
     const el = $(id);
     if (!el) return;
@@ -1898,13 +1935,20 @@
     el.textContent = n > max ? `${max}+` : String(n);
   }
   async function updateBadges(user, projects, notices, members, now) {
-    // 공지: 최근 3일 내 새 글 수 (간단 버전)
+    // 공지: 마지막으로 본 시각 이후의 새 공지 수 (읽으면 사라짐)
+    const lastRead = MY_PROFILE?.lastNoticeReadAt
+      ? (MY_PROFILE.lastNoticeReadAt.toDate ? MY_PROFILE.lastNoticeReadAt.toDate().getTime() : new Date(MY_PROFILE.lastNoticeReadAt).getTime())
+      : 0;
     let newNotices = 0;
     (notices || []).forEach(nt => {
       const c = nt.createdAt?.toDate ? nt.createdAt.toDate().getTime() : 0;
-      if (c && (Date.now() - c < 3 * 86400000)) newNotices++;
+      if (c && c > lastRead) newNotices++;
     });
     setBadge("badgeNotice", newNotices);
+    // 안 읽은 공지가 있으면 토스트 알림
+    if (newNotices > 0) {
+      showToast(`📢 새 공지가 ${newNotices}건 있습니다. '공지사항'에서 확인하세요.`);
+    }
 
     // 프로젝트: 마감 임박(D-7 이내, 미완료) + 지연 수
     let urgent = 0;
@@ -2991,6 +3035,7 @@
       }
     }
     drawNotices();
+    markNoticesRead();   // 공지 화면을 열면 읽음 처리 → 배지 제거
   }
 
   function drawNotices() {
