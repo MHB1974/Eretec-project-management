@@ -2064,15 +2064,79 @@
   async function deleteMember(uid) {
     const m = ALL_MEMBERS.find(x => (x.id||x.uid) === uid);
     if (!m) return;
-    if (!confirm(`'${m.name || m.email}' 팀원을 삭제할까요?\n해당 팀원의 계정 정보가 목록에서 제거됩니다.`)) return;
-    if (!DEMO_MODE && !configMissing()) {
-      try { await deleteDoc(doc(db, "users", uid)); }
-      catch (e) { alert("삭제 실패: " + e.message); return; }
+    if (!confirm(`'${m.name || m.email}' 팀원을 삭제할까요?\n\n해당 팀원의 모든 데이터(주간업무, 출장/외근/연차, 익명 제안)가 함께 삭제되고,\n담당 프로젝트에서도 제외됩니다.\n\n이 작업은 되돌릴 수 없습니다.`)) return;
+
+    if (DEMO_MODE) {
+      // 데모: 메모리상 정리
+      ALL_MEMBERS = ALL_MEMBERS.filter(x => (x.id||x.uid) !== uid);
+      delete DEMO_TRIPS[uid];
+      MY_WEEKLY_CACHE = (MY_WEEKLY_CACHE || []).filter(w => w.uid !== uid);
+      ALL_PROJECTS.forEach(p => {
+        if (p.designers) p.designers = p.designers.filter(d => d !== uid);
+        if (p.owner === uid) p.owner = p.designers?.[0] || "";
+        if (p.sales === uid) p.sales = "";
+        if (p.fieldOwner === uid) p.fieldOwner = "";
+      });
+      MY_TRIPS_CACHE = null; TEAM_TRIPS_CACHE = null; TEAM_WEEKLY_CACHE = null;
+      fillOwnerSelect(ALL_MEMBERS);
+      renderMembers(approvedMembers());
+      renderPendingApprovals();
+      openMembersView();
+      return;
     }
+
+    if (configMissing()) return;
+
+    try {
+      // 1) 그 팀원의 주간업무 삭제
+      const weeklies = await safeGetDocs(query(collection(db, "weekly_plans"), where("uid", "==", uid)));
+      for (const w of (weeklies || [])) {
+        if (w.id) await deleteDoc(doc(db, "weekly_plans", w.id));
+      }
+      // 2) 그 팀원의 출장/외근/연차 삭제
+      const trips = await safeGetDocs(query(collection(db, "trips"), where("uid", "==", uid)));
+      for (const t of (trips || [])) {
+        if (t.id) await deleteDoc(doc(db, "trips", t.id));
+      }
+      // 3) 그 팀원의 익명 제안 삭제
+      const suggs = await safeGetDocs(query(collection(db, "suggestions"), where("uid", "==", uid)));
+      for (const s of (suggs || [])) {
+        if (s.id) await deleteDoc(doc(db, "suggestions", s.id));
+      }
+      // 4) 담당 프로젝트에서 제거 (designers/owner/sales/fieldOwner)
+      for (const p of (ALL_PROJECTS || [])) {
+        const des = p.designers || (p.owner ? [p.owner] : []);
+        const inDesign = des.includes(uid);
+        const inSales = p.sales === uid;
+        const inField = p.fieldOwner === uid;
+        if (inDesign || inSales || inField) {
+          const newDesigners = des.filter(d => d !== uid);
+          const patch = {
+            designers: newDesigners,
+            owner: newDesigners[0] || "",
+            sales: inSales ? "" : (p.sales || ""),
+            fieldOwner: inField ? "" : (p.fieldOwner || ""),
+          };
+          await setDoc(doc(db, "projects", p.id), patch, { merge: true });
+        }
+      }
+      // 5) users 문서 삭제
+      await deleteDoc(doc(db, "users", uid));
+    } catch (e) {
+      alert("삭제 중 오류가 발생했습니다: " + e.message);
+      return;
+    }
+
+    // 캐시 정리 후 다시 로드
     ALL_MEMBERS = ALL_MEMBERS.filter(x => (x.id||x.uid) !== uid);
+    MY_TRIPS_CACHE = null; TEAM_TRIPS_CACHE = null; TEAM_WEEKLY_CACHE = null;
+    await reloadProjects();
     fillOwnerSelect(ALL_MEMBERS);
-    renderMembers(ALL_MEMBERS);
+    renderMembers(approvedMembers());
+    renderPendingApprovals();
+    renderProjects(ALL_PROJECTS);
     openMembersView();
+    alert(`'${m.name || m.email}' 팀원과 관련 데이터가 모두 삭제되었습니다.`);
   }
 
   /* ═════════ 통계 ═════════ */
