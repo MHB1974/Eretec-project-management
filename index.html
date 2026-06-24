@@ -223,6 +223,20 @@
   #toastWrap { position: fixed; top: 18px; left: 50%; transform: translateX(-50%); z-index: 9999; display: flex; flex-direction: column; gap: 8px; align-items: center; pointer-events: none; width: max-content; max-width: 90vw; }
   .toast { background: #1a2438; color: var(--text); border: 1px solid var(--accent); border-radius: 12px; padding: 13px 20px; font-size: 14px; font-weight: 600; box-shadow: 0 8px 28px rgba(0,0,0,0.45); opacity: 0; transform: translateY(-12px); transition: opacity .25s, transform .25s; pointer-events: auto; cursor: pointer; }
   .toast.show { opacity: 1; transform: translateY(0); }
+  /* 공지 메일 받는 팀원 선택 */
+  .mail-recip { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; margin-bottom: 6px; }
+  .mail-recip-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+  .mail-recip-title { font-size: 13px; font-weight: 700; color: var(--text-dim); }
+  .mail-recip-btns { display: flex; gap: 6px; }
+  .mail-recip-all, .mail-recip-none { background: transparent; border: 1px solid var(--line); color: var(--text-dim); font-size: 11px; padding: 4px 10px; border-radius: 7px; cursor: pointer; font-family: var(--font-body); }
+  .mail-recip-all:hover { border-color: var(--accent); color: var(--accent); }
+  .mail-recip-none:hover { border-color: var(--text-mute); color: var(--text); }
+  .mail-recip-list { display: grid; grid-template-columns: repeat(2, 1fr); gap: 6px 14px; max-height: 180px; overflow-y: auto; }
+  .mail-recip-item { display: flex; align-items: center; gap: 8px; font-size: 13px; cursor: pointer; padding: 3px 0; }
+  .mail-recip-item input { width: 16px; height: 16px; accent-color: var(--accent); cursor: pointer; flex-shrink: 0; }
+  .mail-recip-item .rcp-name { font-weight: 600; }
+  .mail-recip-item .rcp-email { font-size: 11px; color: var(--text-mute); }
+  .mail-recip-empty { font-size: 13px; color: var(--text-mute); grid-column: 1 / -1; }
   .carry-tag { display: inline-block; margin-left: 8px; font-size: 10px; font-weight: 600; padding: 1px 6px; border-radius: 10px; background: rgba(245,185,66,0.18); color: #f5b942; vertical-align: middle; }
 
   /* 캘린더 */
@@ -1400,11 +1414,21 @@
       <span class="box"><svg viewBox="0 0 24 24" fill="none"><path d="M5 12l5 5L20 6" stroke="#06231a" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
       <span class="lbl">상단 고정 (중요 공지)</span>
     </label>
-    <label class="remember" style="margin:0 0 4px;">
+    <label class="remember" style="margin:0 0 10px;">
       <input type="checkbox" id="nmMail" checked>
       <span class="box"><svg viewBox="0 0 24 24" fill="none"><path d="M5 12l5 5L20 6" stroke="#06231a" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
-      <span class="lbl">등록 시 팀원 전체에게 이메일 발송</span>
+      <span class="lbl">등록 시 선택한 팀원에게 이메일 발송</span>
     </label>
+    <div class="mail-recip" id="nmRecipBox">
+      <div class="mail-recip-head">
+        <span class="mail-recip-title">받는 팀원 선택</span>
+        <div class="mail-recip-btns">
+          <button type="button" class="mail-recip-all" id="nmRecipAll">전체 선택</button>
+          <button type="button" class="mail-recip-none" id="nmRecipNone">전체 해제</button>
+        </div>
+      </div>
+      <div id="nmRecipList" class="mail-recip-list"></div>
+    </div>
     <div class="status" id="nmStatus"></div>
     <div class="modal-actions">
       <button class="btn-ghost" data-close="noticeModal">취소</button>
@@ -3136,6 +3160,9 @@
     $("nmTitle").textContent = "공지 작성";
     $("nmSave").textContent = "등록";
     $("nmSubject").value = ""; $("nmBody").value = ""; $("nmPin").checked = false;
+    $("nmMail").checked = true;
+    fillNoticeRecipients();      // 받는 팀원 목록 채우기 (전체 체크 상태)
+    toggleRecipBox();
     $("nmStatus").className = "status";
     openModal("noticeModal");
   });
@@ -3151,6 +3178,9 @@
     $("nmSubject").value = n.title || "";
     $("nmBody").value = n.body || "";
     $("nmPin").checked = !!n.pinned;
+    $("nmMail").checked = false;   // 수정 시에는 기본적으로 메일 재발송 안 함
+    fillNoticeRecipients();
+    toggleRecipBox();
     $("nmStatus").className = "status";
     openModal("noticeModal");
   }
@@ -3182,6 +3212,59 @@
       } catch (e) { console.warn("메일 발송 실패:", m.email, e); fail++; }
     }
     return { ok, fail, total: targets.length };
+  }
+
+  // 공지 모달 — 받는 팀원 체크 목록 채우기
+  function fillNoticeRecipients() {
+    const box = $("nmRecipList");
+    if (!box) return;
+    const members = approvedMembers().filter(m => m.email && m.email.includes("@"));
+    if (!members.length) {
+      box.innerHTML = `<div class="mail-recip-empty">메일 받을 팀원이 없습니다. (이메일이 등록된 승인 팀원 필요)</div>`;
+      return;
+    }
+    box.innerHTML = members.map(m => {
+      return `<label class="mail-recip-item">
+        <input type="checkbox" class="nm-recip-cb" value="${esc(m.email)}" data-name="${esc(m.name || m.email)}" checked>
+        <span>
+          <span class="rcp-name">${esc(m.name || "이름없음")}</span>
+          <span class="rcp-email"> ${esc(m.email)}</span>
+        </span>
+      </label>`;
+    }).join("");
+  }
+
+  // 메일 발송 체크박스에 따라 받는 팀원 목록 표시/숨김
+  function toggleRecipBox() {
+    const on = $("nmMail")?.checked;
+    const box = $("nmRecipBox");
+    if (box) box.style.display = on ? "" : "none";
+  }
+  $("nmMail")?.addEventListener("change", toggleRecipBox);
+  $("nmRecipAll")?.addEventListener("click", () => {
+    document.querySelectorAll(".nm-recip-cb").forEach(cb => cb.checked = true);
+  });
+  $("nmRecipNone")?.addEventListener("click", () => {
+    document.querySelectorAll(".nm-recip-cb").forEach(cb => cb.checked = false);
+  });
+
+  // 체크된 받는 팀원 목록 [{email, name}]
+  function getCheckedRecipients() {
+    return Array.from(document.querySelectorAll(".nm-recip-cb"))
+      .filter(cb => cb.checked)
+      .map(cb => ({ email: cb.value, name: cb.dataset.name }));
+  }
+
+  // 선택된 팀원에게 공지 메일 발송
+  async function sendNoticeEmailToSelected(recipients, title, body) {
+    let ok = 0, fail = 0;
+    for (const r of recipients) {
+      try {
+        await sendNoticeEmail(r.email, r.name, title, body);
+        ok++;
+      } catch (e) { console.warn("메일 발송 실패:", r.email, e); fail++; }
+    }
+    return { ok, fail, total: recipients.length };
   }
 
   // 테스트 메일 버튼 — 관리자 본인에게 발송
@@ -3242,20 +3325,23 @@
           createdAt: serverTimestamp(),
         }));
       }
-      const wantMail = $("nmMail")?.checked && !editingNoticeId;  // 신규 등록 + 체크 시에만
+      const wantMail = $("nmMail")?.checked;   // 신규/수정 모두, 체크 시 발송
+      const recipients = wantMail ? getCheckedRecipients() : [];   // 모달 닫기 전에 미리 읽기
       closeModal("noticeModal");
       ALL_NOTICES = await safeGetDocs(query(collection(db, "notices"), orderBy("createdAt", "desc"))) || [];
       drawNotices();
       renderNotices(ALL_NOTICES.slice(0, 5));   // 홈 화면 공지 카드도 갱신
       editingNoticeId = null;
-      // 팀원 전체 메일 발송 (백그라운드)
-      if (wantMail) {
-        showToast("📧 팀원에게 공지 메일을 보내는 중…", { allowRepeat: true });
-        sendNoticeEmailToTeam(title, body).then(r => {
+      // 선택한 팀원에게 메일 발송 (백그라운드)
+      if (wantMail && recipients.length) {
+        showToast(`📧 ${recipients.length}명에게 공지 메일을 보내는 중…`, { allowRepeat: true });
+        sendNoticeEmailToSelected(recipients, title, body).then(r => {
           showToast(`📧 공지 메일 발송 완료: 성공 ${r.ok}건${r.fail ? `, 실패 ${r.fail}건` : ""} (총 ${r.total}명)`, { allowRepeat: true, duration: 8000 });
         }).catch(e => {
           showToast("📧 공지 메일 발송 중 오류가 발생했습니다.", { allowRepeat: true });
         });
+      } else if (wantMail && !recipients.length) {
+        showToast("받는 팀원을 선택하지 않아 메일은 발송하지 않았습니다.", { allowRepeat: true });
       }
     } catch (e) {
       $("nmStatus").className = "status show err"; $("nmStatus").textContent = "저장 실패: " + e.message;
