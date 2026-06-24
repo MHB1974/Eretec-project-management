@@ -326,6 +326,11 @@
   .pj-owner.none { color: var(--text-mute); }
   .own-role { font-size: 10px; font-weight: 700; color: #15120a; padding: 2px 7px; border-radius: 8px; margin-right: 2px; }
   .own-name { font-size: 13.5px; font-weight: 700; }
+  .own-name.own-unassigned { color: var(--text-mute); font-weight: 500; font-style: italic; }
+  /* 연월일 드롭다운 */
+  .date-dd-row { display: flex; gap: 6px; }
+  .date-dd { flex: 1; padding: 11px 8px; background: #0F172A; border: 1px solid #334155; border-radius: 9px; color: var(--text); font-family: var(--font-body); font-size: 14px; cursor: pointer; }
+  .date-dd:focus { outline: none; border-color: var(--accent); }
   .own-sep { color: var(--text-mute); margin: 0 4px; }
   .pj-meta { display: flex; align-items: center; gap: 12px; font-size: 12px; color: var(--text-dim); margin-bottom: 14px; flex-wrap: wrap; }
   .pj-prog-wrap { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; }
@@ -1268,12 +1273,20 @@
     </div>
     <div class="field-row">
       <div class="field">
-        <label for="pmStart">시작일</label>
-        <input type="date" id="pmStart">
+        <label>시작일</label>
+        <div class="date-dd-row">
+          <select id="pmStartY" class="date-dd"></select>
+          <select id="pmStartM" class="date-dd"></select>
+          <select id="pmStartD" class="date-dd"></select>
+        </div>
       </div>
       <div class="field">
-        <label for="pmDue">납기일</label>
-        <input type="date" id="pmDue">
+        <label>납기일</label>
+        <div class="date-dd-row">
+          <select id="pmDueY" class="date-dd"></select>
+          <select id="pmDueM" class="date-dd"></select>
+          <select id="pmDueD" class="date-dd"></select>
+        </div>
       </div>
     </div>
     <label style="display:block;font-size:12px;color:var(--text-dim);margin-bottom:8px;">담당자 지정</label>
@@ -3209,6 +3222,42 @@
   const DEFAULT_DESIGN_TASKS = ["사양 협의","H-beam","차폐 판넬","이중마루","전기","공조","유틸리티","인테리어"];
   function makeDefaultTasks() { return DEFAULT_DESIGN_TASKS.map(n => ({ name: n, startIdx: null, endIdx: null })); }
 
+  // 연월일 드롭다운 채우기/읽기 헬퍼
+  function fillDateDropdowns(prefix, dateVal) {
+    const ySel = $(prefix + "Y"), mSel = $(prefix + "M"), dSel = $(prefix + "D");
+    if (!ySel || !mSel || !dSel) return;
+    const now = new Date();
+    const d = dateVal ? (dateVal.toDate ? dateVal.toDate() : new Date(dateVal)) : null;
+    const baseY = now.getFullYear();
+    // 연도: 작년 ~ +6년
+    let yOpts = `<option value="">년</option>`;
+    for (let y = baseY - 1; y <= baseY + 6; y++) yOpts += `<option value="${y}">${y}년</option>`;
+    ySel.innerHTML = yOpts;
+    // 월
+    let mOpts = `<option value="">월</option>`;
+    for (let m = 1; m <= 12; m++) mOpts += `<option value="${m}">${m}월</option>`;
+    mSel.innerHTML = mOpts;
+    // 일
+    let dOpts = `<option value="">일</option>`;
+    for (let dd = 1; dd <= 31; dd++) dOpts += `<option value="${dd}">${dd}일</option>`;
+    dSel.innerHTML = dOpts;
+    // 값 설정
+    if (d) {
+      ySel.value = d.getFullYear();
+      mSel.value = d.getMonth() + 1;
+      dSel.value = d.getDate();
+    } else {
+      ySel.value = ""; mSel.value = ""; dSel.value = "";
+    }
+  }
+
+  // 드롭다운에서 날짜 객체 읽기 (불완전하면 null)
+  function readDateDropdowns(prefix) {
+    const y = $(prefix + "Y")?.value, m = $(prefix + "M")?.value, d = $(prefix + "D")?.value;
+    if (!y || !m || !d) return null;
+    return new Date(Number(y), Number(m) - 1, Number(d));
+  }
+
   function openProjModal(p) {
     editingProjectId = p ? p.id : null;
     $("pmModalTitle").textContent = p ? "프로젝트 수정" : "프로젝트 생성";
@@ -3216,8 +3265,8 @@
     $("pmName").value = p?.name || "";
     $("pmClient").value = p?.client || "";
     $("pmStatus").value = p?.status || "run";
-    $("pmStart").value = p?.startDate ? toInputDate(p.startDate) : "";
-    $("pmDue").value = p?.dueDate ? toInputDate(p.dueDate) : "";
+    fillDateDropdowns("pmStart", p?.startDate || null);
+    fillDateDropdowns("pmDue", p?.dueDate || null);
     const des = p?.designers || (p?.owner ? [p.owner] : []);
     $("pmDesign1").value = des[0] || "";
     $("pmDesign2").value = des[1] || "";
@@ -3256,13 +3305,13 @@
       if (editingProjectId) {
         const p = ALL_PROJECTS.find(x => x.id === editingProjectId);
         Object.assign(p, baseFields,
-          { startDate: $("pmStart").value ? new Date($("pmStart").value) : null,
-            dueDate: $("pmDue").value ? new Date($("pmDue").value) : null });
+          { startDate: readDateDropdowns("pmStart"),
+            dueDate: readDateDropdowns("pmDue") });
       } else {
         ALL_PROJECTS = [{
           id: "demo_" + Date.now(), ...baseFields,
-          startDate: $("pmStart").value ? new Date($("pmStart").value) : null,
-          dueDate: $("pmDue").value ? new Date($("pmDue").value) : null,
+          startDate: readDateDropdowns("pmStart"),
+          dueDate: readDateDropdowns("pmDue"),
           designTasks: makeDefaultTasks(),
         }, ...ALL_PROJECTS];
       }
@@ -3274,8 +3323,8 @@
     if (configMissing()) { $("pmStatus2").className = "status show err"; $("pmStatus2").textContent = "Firebase 키가 설정되지 않아 저장할 수 없습니다."; return; }
     const data = {
       ...baseFields,
-      startDate: $("pmStart").value ? Timestamp.fromDate(new Date($("pmStart").value)) : null,
-      dueDate:   $("pmDue").value ? Timestamp.fromDate(new Date($("pmDue").value)) : null,
+      startDate: readDateDropdowns("pmStart") ? Timestamp.fromDate(readDateDropdowns("pmStart")) : null,
+      dueDate:   readDateDropdowns("pmDue") ? Timestamp.fromDate(readDateDropdowns("pmDue")) : null,
     };
     try {
       $("pmSave").textContent = editingProjectId ? "수정 중…" : "저장 중…"; $("pmSave").disabled = true;
@@ -3370,17 +3419,22 @@
     const des = (p.designers || (p.owner ? [p.owner] : [])).filter(Boolean);
     const seg = [];
     // 역할 배지(글자색=흰/검 대비)와 이름 모두 해당 역할 색상으로 통일
-    const part = (color, label, uids) => {
-      const names = uids.map(uid =>
-        `<span class="own-name" style="color:${color}">${esc(memberNameRank(uid))}</span>`).join(" ");
-      return `<span class="own-role" style="background:${color}">${label}</span> ${names}`;
+    const part = (color, label, uid) => {
+      const nameHtml = uid
+        ? `<span class="own-name" style="color:${color}">${esc(memberNameRank(uid))}</span>`
+        : `<span class="own-name own-unassigned">미지정</span>`;
+      return `<span class="own-role" style="background:${color}">${label}</span> ${nameHtml}`;
     };
-    // 설계 담당자는 설계1, 설계2로 각각 구분 표시
-    des.forEach((uid, i) => {
-      seg.push(part(ROLE_COLORS.design, `설계${i + 1}`, [uid]));
-    });
-    if (p.sales) seg.push(part(ROLE_COLORS.sales, "영업", [p.sales]));
-    if (p.fieldOwner) seg.push(part(ROLE_COLORS.field, "현장", [p.fieldOwner]));
+    // 설계 담당자는 설계1, 설계2로 각각 구분 표시 (없으면 설계1 미지정)
+    if (des.length) {
+      des.forEach((uid, i) => seg.push(part(ROLE_COLORS.design, `설계${i + 1}`, uid)));
+    } else {
+      seg.push(part(ROLE_COLORS.design, "설계1", null));
+    }
+    // 영업 (미지정도 표시)
+    seg.push(part(ROLE_COLORS.sales, "영업", p.sales || null));
+    // 현장 (미지정도 표시)
+    seg.push(part(ROLE_COLORS.field, "현장", p.fieldOwner || null));
     return seg.join('<span class="own-sep">·</span>');
   }
 
