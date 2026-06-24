@@ -257,7 +257,15 @@
   .ntc-del { background: transparent; border: none; color: var(--text-mute); cursor: pointer; padding: 3px; border-radius: 6px; flex-shrink: 0; }
   .ntc-del:hover { color: var(--danger); background: rgba(255,122,122,0.1); }
   .ntc-del svg { width: 16px; height: 16px; display: block; }
+  .ntc-edit { background: transparent; border: none; color: var(--text-mute); cursor: pointer; padding: 3px; border-radius: 6px; flex-shrink: 0; }
+  .ntc-edit:hover { color: var(--accent); background: rgba(87,224,154,0.1); }
+  .ntc-edit svg { width: 16px; height: 16px; display: block; }
   .ntc-body { font-size: 14px; color: var(--text-dim); line-height: 1.7; margin-top: 10px; white-space: pre-wrap; }
+  .ntc-title-link { cursor: pointer; transition: color .15s; }
+  .ntc-title-link:hover { color: var(--accent); }
+  .ntc-body-preview { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; white-space: normal; }
+  .nd-meta { display: flex; align-items: center; gap: 10px; font-size: 12px; color: var(--text-mute); margin-bottom: 14px; }
+  .nd-body { font-size: 14px; color: var(--text); line-height: 1.8; white-space: pre-wrap; word-break: break-word; max-height: 50vh; overflow-y: auto; padding: 4px 0 8px; }
   .ntc-meta { display: flex; align-items: center; gap: 10px; margin-top: 12px; font-size: 12px; color: var(--text-mute); }
   .ntc-author { color: var(--text-dim); }
 
@@ -1269,6 +1277,25 @@
     <div class="modal-actions">
       <button class="btn-ghost" data-close="noticeModal">취소</button>
       <button class="btn-primary" id="nmSave">등록</button>
+    </div>
+  </div>
+</div>
+
+<!-- 공지 상세 보기 모달 -->
+<div class="modal-bg" id="noticeDetailModal">
+  <div class="modal">
+    <div class="modal-h">
+      <h3 id="ndTitle">공지 제목</h3>
+      <button class="modal-x" data-close="noticeDetailModal">×</button>
+    </div>
+    <div class="nd-meta">
+      <span id="ndAuthor">관리자</span>
+      <span>·</span>
+      <span id="ndDate"></span>
+    </div>
+    <div class="nd-body" id="ndBody"></div>
+    <div class="modal-actions">
+      <button class="btn-primary" data-close="noticeDetailModal">닫기</button>
     </div>
   </div>
 </div>
@@ -2886,19 +2913,23 @@
     el.innerHTML = sorted.map(n => {
       const created = n.createdAt?.toDate ? n.createdAt.toDate().getTime() : 0;
       const isNew = created && (now - created < 3 * 86400000);
+      const editBtn = isAdmin ? `<button class="ntc-edit" data-edit-notice="${esc(n.id)}" title="수정">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7M18.5 2.5a2.12 2.12 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </button>` : "";
       const delBtn = isAdmin ? `<button class="ntc-del" data-del-notice="${esc(n.id)}" title="삭제">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" stroke-linecap="round" stroke-linejoin="round"/></svg>
       </button>` : "";
       return `<article class="ntc ${n.pinned ? 'pinned' : ''}">
         <div class="ntc-head">
-          <div class="ntc-title">
+          <div class="ntc-title ntc-title-link" data-open-notice="${esc(n.id)}">
             ${n.pinned ? '<span class="ntc-pin">고정</span>' : ''}
             ${isNew ? '<span class="ntc-new"></span>' : ''}
             ${esc(n.title || "(제목 없음)")}
           </div>
+          ${editBtn}
           ${delBtn}
         </div>
-        ${n.body ? `<div class="ntc-body">${esc(n.body)}</div>` : ""}
+        ${n.body ? `<div class="ntc-body ntc-body-preview">${esc(n.body)}</div>` : ""}
         <div class="ntc-meta">
           <span class="ntc-author">${esc(n.authorName || "관리자")}</span>
           <span>·</span>
@@ -2907,50 +2938,106 @@
       </article>`;
     }).join("");
 
+    // 제목 클릭 → 상세 보기
+    el.querySelectorAll("[data-open-notice]").forEach(t =>
+      t.addEventListener("click", () => openNoticeDetail(t.dataset.openNotice)));
+
     if (isAdmin) {
       el.querySelectorAll("[data-del-notice]").forEach(b =>
         b.addEventListener("click", () => deleteNotice(b.dataset.delNotice)));
+      el.querySelectorAll("[data-edit-notice]").forEach(b =>
+        b.addEventListener("click", () => openNoticeEdit(b.dataset.editNotice)));
     }
   }
+
+  // 공지 상세 모달 열기
+  function openNoticeDetail(id) {
+    const n = (ALL_NOTICES || []).find(x => x.id === id);
+    if (!n) return;
+    $("ndTitle").innerHTML = `${n.pinned ? '<span class="ntc-pin">고정</span> ' : ''}${esc(n.title || "(제목 없음)")}`;
+    $("ndBody").textContent = n.body || "(내용 없음)";
+    $("ndAuthor").textContent = n.authorName || "관리자";
+    $("ndDate").textContent = fmtDate(n.createdAt);
+    openModal("noticeDetailModal");
+  }
+
+  // 공지 작성/수정 대상 (null = 새 작성)
+  let editingNoticeId = null;
 
   // 공지 작성 (관리자)
   $("addNoticeBtn").addEventListener("click", () => {
     if (CURRENT_ROLE !== "admin") return;
+    editingNoticeId = null;
+    $("nmTitle").textContent = "공지 작성";
+    $("nmSave").textContent = "등록";
     $("nmSubject").value = ""; $("nmBody").value = ""; $("nmPin").checked = false;
     $("nmStatus").className = "status";
     openModal("noticeModal");
   });
 
+  // 공지 수정 (관리자) — 기존 내용 채워서 모달 열기
+  function openNoticeEdit(id) {
+    if (CURRENT_ROLE !== "admin") return;
+    const n = (ALL_NOTICES || []).find(x => x.id === id);
+    if (!n) return;
+    editingNoticeId = id;
+    $("nmTitle").textContent = "공지 수정";
+    $("nmSave").textContent = "수정 저장";
+    $("nmSubject").value = n.title || "";
+    $("nmBody").value = n.body || "";
+    $("nmPin").checked = !!n.pinned;
+    $("nmStatus").className = "status";
+    openModal("noticeModal");
+  }
+
   $("nmSave").addEventListener("click", async () => {
     if (CURRENT_ROLE !== "admin") return;
     const title = $("nmSubject").value.trim();
     const body = $("nmBody").value.trim();
+    const pinned = $("nmPin").checked;
     if (!title) { $("nmStatus").className = "status show err"; $("nmStatus").textContent = "제목을 입력하세요."; return; }
 
     if (DEMO_MODE) {
-      const np = { id: "ntc_" + Date.now(), title, body, pinned: $("nmPin").checked,
-        authorName: CURRENT_USER?.displayName || "문형범", createdAt: { toDate: () => new Date() } };
-      ALL_NOTICES = [np, ...(ALL_NOTICES || [])];
-      closeModal("noticeModal"); drawNotices();
+      if (editingNoticeId) {
+        const n = (ALL_NOTICES || []).find(x => x.id === editingNoticeId);
+        if (n) { n.title = title; n.body = body; n.pinned = pinned; }
+      } else {
+        const np = { id: "ntc_" + Date.now(), title, body, pinned,
+          authorName: CURRENT_USER?.displayName || "문형범", createdAt: { toDate: () => new Date() } };
+        ALL_NOTICES = [np, ...(ALL_NOTICES || [])];
+      }
+      closeModal("noticeModal"); drawNotices(); renderNotices((ALL_NOTICES||[]).slice(0,5));
+      editingNoticeId = null;
       return;
     }
     if (configMissing()) { $("nmStatus").className = "status show err"; $("nmStatus").textContent = "Firebase 키가 설정되지 않아 저장할 수 없습니다."; return; }
     try {
-      $("nmSave").textContent = "등록 중…"; $("nmSave").disabled = true;
-      await addDoc(collection(db, "notices"), stripUndefined({
-        title, body, pinned: $("nmPin").checked,
-        authorName: CURRENT_USER?.displayName || "관리자",
-        authorUid: CURRENT_USER?.uid || "",
-        createdAt: serverTimestamp(),
-      }));
+      $("nmSave").disabled = true;
+      const savingLabel = editingNoticeId ? "저장 중…" : "등록 중…";
+      $("nmSave").textContent = savingLabel;
+      if (editingNoticeId) {
+        // 수정: 제목/내용/고정만 갱신 (작성자·작성일 유지)
+        await setDoc(doc(db, "notices", editingNoticeId), stripUndefined({
+          title, body, pinned,
+          updatedAt: serverTimestamp(),
+        }), { merge: true });
+      } else {
+        await addDoc(collection(db, "notices"), stripUndefined({
+          title, body, pinned,
+          authorName: CURRENT_USER?.displayName || "관리자",
+          authorUid: CURRENT_USER?.uid || "",
+          createdAt: serverTimestamp(),
+        }));
+      }
       closeModal("noticeModal");
       ALL_NOTICES = await safeGetDocs(query(collection(db, "notices"), orderBy("createdAt", "desc"))) || [];
       drawNotices();
       renderNotices(ALL_NOTICES.slice(0, 5));   // 홈 화면 공지 카드도 갱신
+      editingNoticeId = null;
     } catch (e) {
       $("nmStatus").className = "status show err"; $("nmStatus").textContent = "저장 실패: " + e.message;
     } finally {
-      $("nmSave").textContent = "등록"; $("nmSave").disabled = false;
+      $("nmSave").textContent = editingNoticeId ? "수정 저장" : "등록"; $("nmSave").disabled = false;
     }
   });
 
