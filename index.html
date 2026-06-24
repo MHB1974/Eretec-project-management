@@ -19,6 +19,21 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
+<!-- EmailJS SDK (공지 메일 발송용) -->
+<script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
+<script>
+  // EmailJS 초기화
+  window.EMAILJS_CONFIG = {
+    serviceId: "service_y12bdi2",
+    templateId: "template_d11dh9h",
+    publicKey: "CXT7dNI6ICFHXas8K",
+  };
+  (function initEmailJS(){
+    try {
+      if (window.emailjs) { window.emailjs.init({ publicKey: window.EMAILJS_CONFIG.publicKey }); }
+    } catch(e){ console.warn("EmailJS init 실패:", e); }
+  })();
+</script>
 <style>
   :root {
     --deep:     #1e2e40;
@@ -1385,9 +1400,15 @@
       <span class="box"><svg viewBox="0 0 24 24" fill="none"><path d="M5 12l5 5L20 6" stroke="#06231a" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
       <span class="lbl">상단 고정 (중요 공지)</span>
     </label>
+    <label class="remember" style="margin:0 0 4px;">
+      <input type="checkbox" id="nmMail" checked>
+      <span class="box"><svg viewBox="0 0 24 24" fill="none"><path d="M5 12l5 5L20 6" stroke="#06231a" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+      <span class="lbl">등록 시 팀원 전체에게 이메일 발송</span>
+    </label>
     <div class="status" id="nmStatus"></div>
     <div class="modal-actions">
       <button class="btn-ghost" data-close="noticeModal">취소</button>
+      <button class="btn-ghost" id="nmTestMail" style="border-color:#4db8e8;color:#4db8e8;">테스트 메일</button>
       <button class="btn-primary" id="nmSave">등록</button>
     </div>
   </div>
@@ -3134,6 +3155,54 @@
     openModal("noticeModal");
   }
 
+  // 공지 이메일 발송 (EmailJS)
+  async function sendNoticeEmail(toEmail, toName, title, body) {
+    if (!window.emailjs || !window.EMAILJS_CONFIG) throw new Error("EmailJS가 로드되지 않았습니다.");
+    const cfg = window.EMAILJS_CONFIG;
+    const params = {
+      to_email: toEmail,
+      to_name: toName || "팀원",
+      notice_title: title,
+      notice_body: body || "(내용 없음)",
+      name: "ERETEC 설계팀",     // 템플릿 잔재 변수 대응
+      message: body || "",       // 템플릿 잔재 변수 대응
+      email: toEmail,            // reply_to용
+    };
+    return window.emailjs.send(cfg.serviceId, cfg.templateId, params);
+  }
+
+  // 승인된 팀원 전체에게 공지 메일 발송 (실패해도 전체 멈추지 않음)
+  async function sendNoticeEmailToTeam(title, body) {
+    const targets = approvedMembers().filter(m => m.email && m.email.includes("@"));
+    let ok = 0, fail = 0;
+    for (const m of targets) {
+      try {
+        await sendNoticeEmail(m.email, m.name || m.email, title, body);
+        ok++;
+      } catch (e) { console.warn("메일 발송 실패:", m.email, e); fail++; }
+    }
+    return { ok, fail, total: targets.length };
+  }
+
+  // 테스트 메일 버튼 — 관리자 본인에게 발송
+  $("nmTestMail")?.addEventListener("click", async () => {
+    const title = $("nmSubject").value.trim() || "(제목 미입력) 테스트 공지";
+    const body = $("nmBody").value.trim() || "이것은 테스트 메일입니다.";
+    const myEmail = MY_PROFILE?.email || CURRENT_USER?.email;
+    if (!myEmail) { $("nmStatus").className = "status show err"; $("nmStatus").textContent = "본인 이메일을 찾을 수 없습니다."; return; }
+    const btn = $("nmTestMail");
+    try {
+      btn.disabled = true; btn.textContent = "발송 중…";
+      $("nmStatus").className = "status show"; $("nmStatus").textContent = "테스트 메일 발송 중…";
+      await sendNoticeEmail(myEmail, MY_PROFILE?.name || "관리자", title, body);
+      $("nmStatus").className = "status show ok"; $("nmStatus").textContent = `테스트 메일을 ${myEmail} 로 보냈습니다. 메일함을 확인하세요.`;
+    } catch (e) {
+      $("nmStatus").className = "status show err"; $("nmStatus").textContent = "테스트 메일 실패: " + (e?.text || e?.message || e);
+    } finally {
+      btn.disabled = false; btn.textContent = "테스트 메일";
+    }
+  });
+
   $("nmSave").addEventListener("click", async () => {
     if (CURRENT_ROLE !== "admin") return;
     const title = $("nmSubject").value.trim();
@@ -3173,11 +3242,21 @@
           createdAt: serverTimestamp(),
         }));
       }
+      const wantMail = $("nmMail")?.checked && !editingNoticeId;  // 신규 등록 + 체크 시에만
       closeModal("noticeModal");
       ALL_NOTICES = await safeGetDocs(query(collection(db, "notices"), orderBy("createdAt", "desc"))) || [];
       drawNotices();
       renderNotices(ALL_NOTICES.slice(0, 5));   // 홈 화면 공지 카드도 갱신
       editingNoticeId = null;
+      // 팀원 전체 메일 발송 (백그라운드)
+      if (wantMail) {
+        showToast("📧 팀원에게 공지 메일을 보내는 중…", { allowRepeat: true });
+        sendNoticeEmailToTeam(title, body).then(r => {
+          showToast(`📧 공지 메일 발송 완료: 성공 ${r.ok}건${r.fail ? `, 실패 ${r.fail}건` : ""} (총 ${r.total}명)`, { allowRepeat: true, duration: 8000 });
+        }).catch(e => {
+          showToast("📧 공지 메일 발송 중 오류가 발생했습니다.", { allowRepeat: true });
+        });
+      }
     } catch (e) {
       $("nmStatus").className = "status show err"; $("nmStatus").textContent = "저장 실패: " + e.message;
     } finally {
