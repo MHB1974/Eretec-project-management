@@ -341,6 +341,11 @@
   .own-sep { color: var(--text-mute); margin: 0 4px; }
   .pj-meta { display: flex; align-items: center; gap: 12px; font-size: 12px; color: var(--text-dim); margin-bottom: 14px; flex-wrap: wrap; }
   .pj-prog-wrap { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; }
+  .pj-prog-label { font-size: 13px; font-weight: 700; color: var(--text-dim); flex-shrink: 0; }
+  .pb-back-btn { background: var(--panel); border: 1px solid var(--line); color: var(--text); padding: 9px 16px; border-radius: 9px; font-family: var(--font-body); font-size: 13px; font-weight: 600; cursor: pointer; margin-bottom: 16px; }
+  .pb-back-btn:hover { border-color: var(--accent); color: var(--accent); }
+  .proj-clickable { cursor: pointer; transition: background .15s, border-color .15s; }
+  .proj-clickable:hover { border-color: var(--accent); background: rgba(87,224,154,0.04); }
   .pj-prog { flex: 1; max-width: 300px; height: 12px; background: rgba(0,0,0,0.25); border-radius: 20px; overflow: hidden; box-shadow: inset 0 1px 3px rgba(0,0,0,0.4); }
   .pj-prog-fill { height: 100%; border-radius: 20px; background: linear-gradient(90deg, #2ee6a0, #57e09a 50%, #a8f05a); box-shadow: 0 0 12px rgba(87,224,154,0.7); transition: width .5s; }
   .pj-prog-pct { font-size: 15px; font-weight: 800; color: var(--accent); text-shadow: 0 0 10px rgba(87,224,154,0.4); }
@@ -1278,6 +1283,10 @@
         </select>
       </div>
     </div>
+    <div class="field">
+      <label for="pmClientEmail">발주처 담당자 E-mail</label>
+      <input type="email" id="pmClientEmail" placeholder="예: manager@kai.co.kr">
+    </div>
     <div class="field-row">
       <div class="field">
         <label>시작일</label>
@@ -2194,6 +2203,7 @@
 
   let CURRENT_ROLE = "member";
   let ALL_PROJECTS = [];   // 삭제 등에서 참조
+  let SINGLE_PROJECT_ID = null;  // 대시보드에서 특정 프로젝트 클릭 시 그 프로젝트만 보기
 
   function renderProjects(projects) {
     const el = $("homeProjects");
@@ -2213,7 +2223,7 @@
       const delBtn = isAdmin ? `<button class="proj-del" data-del="${esc(p.id)}" title="삭제">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" stroke-linecap="round" stroke-linejoin="round"/></svg>
       </button>` : "";
-      return `<div class="proj">
+      return `<div class="proj proj-clickable" data-proj-id="${esc(p.id)}">
         <div class="proj-top">
           <span class="badge ${bcls}">${btxt}</span>
           <span class="proj-name">${esc(p.name || "(이름 없음)")}</span>
@@ -2222,6 +2232,7 @@
           <span class="dday ${dd.cls}">${dd.txt}</span>
           ${delBtn}
         </div>
+        <div class="proj-owner" style="margin:6px 0 4px;">${projectOwnersHtml(p)}</div>
         <div class="bar-wrap">
           <div class="bar"><div class="bar-fill" style="width:${pct}%;background:${barColor};"></div></div>
           <span class="bar-pct">${pct}%</span>
@@ -2232,9 +2243,26 @@
     // 삭제 버튼 이벤트 (관리자)
     if (isAdmin) {
       el.querySelectorAll("[data-del]").forEach(b => {
-        b.addEventListener("click", () => deleteProject(b.dataset.del));
+        b.addEventListener("click", (e) => { e.stopPropagation(); deleteProject(b.dataset.del); });
       });
     }
+    // 프로젝트 카드 클릭 → 해당 프로젝트 현황으로 이동
+    el.querySelectorAll("[data-proj-id]").forEach(card => {
+      card.addEventListener("click", (e) => {
+        if (e.target.closest("[data-del]")) return;  // 삭제 버튼 클릭은 제외
+        const pid = card.dataset.projId;
+        openSingleProject(pid);
+      });
+    });
+  }
+
+  // 특정 프로젝트만 보여주는 화면으로 이동
+  function openSingleProject(pid) {
+    SINGLE_PROJECT_ID = pid;
+    showView("projectboard");
+    document.querySelectorAll(".nav button").forEach(b => b.classList.remove("active"));
+    const navBtn = document.querySelector('.nav button[data-view="projectboard"]');
+    if (navBtn) navBtn.classList.add("active");
   }
 
   function renderNotices(notices) {
@@ -2333,6 +2361,8 @@
   document.querySelectorAll(".nav button").forEach(btn => {
     btn.addEventListener("click", () => {
       const v = btn.dataset.view;
+      // 사이드바에서 프로젝트 현황 직접 클릭 시 단일 보기 해제 (전체 보기)
+      if (v === "projectboard") SINGLE_PROJECT_ID = null;
       // 모바일: 프로젝트 작성은 데스크톱 전용 → 현황으로 유도
       if (v === "project" && isMobile()) {
         alert("프로젝트 작성·편집은 데스크톱(PC/노트북)에서만 가능합니다.\n모바일에서는 ‘프로젝트 현황’에서 모니터링하실 수 있습니다.");
@@ -3271,6 +3301,7 @@
     $("pmSave").textContent = p ? "수정" : "저장";
     $("pmName").value = p?.name || "";
     $("pmClient").value = p?.client || "";
+    $("pmClientEmail").value = p?.clientEmail || "";
     $("pmStatus").value = p?.status || "run";
     fillDateDropdowns("pmStart", p?.startDate || null);
     fillDateDropdowns("pmDue", p?.dueDate || null);
@@ -3303,6 +3334,7 @@
     const baseFields = {
       name,
       client: $("pmClient").value.trim(),
+      clientEmail: $("pmClientEmail").value.trim(),
       status: $("pmStatus").value,
       designers, sales, fieldOwner,
       owner: designers[0] || "",   // 호환: 기존 owner 필드는 설계1로 유지
@@ -3551,7 +3583,7 @@
     }
 
     const toolbar = editable ? `
-      <span style="font-size:11px;color:var(--text-mute);">${weeks.length ? "칸을 클릭해 색을 채우거나 지웁니다. 공정 추가·수정은 ✎(수정)에서." : ""}</span>
+      <span style="font-size:11px;color:var(--text-mute);"></span>
       <button class="pj-save-btn" data-psave="${esc(p.id)}">저장</button>` : `<span></span>`;
 
     let headHtml;
@@ -3610,6 +3642,7 @@
     return `<div class="pj-block">
       ${headHtml}
       <div class="pj-prog-wrap">
+        <span class="pj-prog-label">진행률</span>
         <div class="pj-prog"><div class="pj-prog-fill" style="width:${pct}%"></div></div>
         <span class="pj-prog-pct">${pct}%</span>
       </div>
@@ -3916,8 +3949,20 @@
   function renderProjectBoard() {
     const box = $("pbBoard");
     if (!ALL_PROJECTS.length) { box.innerHTML = `<div class="empty">등록된 프로젝트가 없습니다.</div>`; return; }
+    // 단일 프로젝트 보기 모드면 해당 프로젝트만
+    let projectsToShow = ALL_PROJECTS;
+    let backBtnHtml = "";
+    if (SINGLE_PROJECT_ID) {
+      const one = ALL_PROJECTS.find(p => p.id === SINGLE_PROJECT_ID);
+      if (one) {
+        projectsToShow = [one];
+        backBtnHtml = `<button class="pb-back-btn" id="pbBackBtn">← 전체 프로젝트 보기</button>`;
+      } else {
+        SINGLE_PROJECT_ID = null;  // 못 찾으면 전체로
+      }
+    }
     // 모든 프로젝트의 설계 일정표를 한 화면에 (읽기 전용)
-    box.innerHTML = ALL_PROJECTS.map(p => {
+    box.innerHTML = backBtnHtml + projectsToShow.map(p => {
       const weeks = projectWeeks(p);
       const ownersLabel = projectOwnersHtml(p) || "담당자 미지정";
       const pct = autoProgress(p);
@@ -3949,16 +3994,26 @@
           ${p.client ? `<span class="pj-client">발주처: ${esc(p.client)}</span>` : ""}
         </div>
         <div class="pj-owner" style="margin-top:6px;">${ownersLabel}</div>
+        ${p.clientEmail ? `<div class="pj-client-email" style="margin-top:5px;font-size:12px;color:var(--text-dim);">📧 발주처 담당자: <a href="mailto:${esc(p.clientEmail)}" style="color:#4db8e8;">${esc(p.clientEmail)}</a></div>` : ""}
         <div class="pj-meta" style="margin-top:6px;">
           <span>${fmtDate(p.startDate)} ~ ${fmtDate(p.dueDate)}</span>
         </div>
         <div class="pj-prog-wrap">
+          <span class="pj-prog-label">진행률</span>
           <div class="pj-prog"><div class="pj-prog-fill" style="width:${pct}%"></div></div>
           <span class="pj-prog-pct">${pct}%</span>
         </div>
         ${gridHtml}
       </div>`;
     }).join("");
+    // 전체 보기로 돌아가기 버튼
+    const backBtn = $("pbBackBtn");
+    if (backBtn) {
+      backBtn.addEventListener("click", () => {
+        SINGLE_PROJECT_ID = null;
+        renderProjectBoard();
+      });
+    }
   }
 
   // 프로젝트 작성 화면의 추가 버튼 → 기존 추가 모달 재사용
