@@ -1449,16 +1449,17 @@
   $("tabLogin").addEventListener("click", () => setMode("login"));
   $("tabSignup").addEventListener("click", () => setMode("signup"));
 
-  async function ensureUserDoc(user, rank) {
+  async function ensureUserDoc(user, rank, name) {
     const isAdminEmail = ADMIN_EMAILS.includes(user.email);
     const role = isAdminEmail ? "admin" : "member";
+    const displayName = name || user.displayName || "";
     try {
       const ref = doc(db, "users", user.uid);
       const snap = await getDoc(ref);
       if (!snap.exists()) {
         // 관리자 이메일은 자동 승인, 그 외 신규 가입자는 승인 대기(pending)
         await setDoc(ref, {
-          name: user.displayName || "", email: user.email, photo: user.photoURL || "",
+          name: displayName, email: user.email, photo: user.photoURL || "",
           role, rank: rank || "사원",
           status: isAdminEmail ? "approved" : "pending",
           createdAt: serverTimestamp()
@@ -1467,8 +1468,9 @@
         const d = snap.data();
         const patch = {};
         if (rank && !d.rank) patch.rank = rank;
+        if (name && !d.name) patch.name = name;  // 이름이 비어있으면 보강
         // status 필드가 없는 기존 사용자는 승인된 것으로 간주 (하위 호환)
-        if (d.status === undefined) patch.status = isAdminEmail ? "approved" : "approved";
+        if (d.status === undefined) patch.status = "approved";
         if (Object.keys(patch).length) await setDoc(ref, patch, { merge: true });
       }
     } catch (e) { console.warn("users 문서 생략:", e.message); }
@@ -1515,6 +1517,7 @@
       if (mode === "signup") {
         if (!name) return showStatus("이름을 입력하세요.", "err");
         pendingRank = $("drank").value;
+        pendingName = name;
         showStatus("가입 신청 중…", "ok");
         const cred = await createUserWithEmailAndPassword(auth, email, pw);
         await updateProfile(cred.user, { displayName: name });
@@ -1579,13 +1582,15 @@
   });
 
   let pendingRank = null;  // 가입 직후 직급 저장용
+  let pendingName = null;  // 가입 직후 이름 저장용
 
   let MY_PROFILE = null;   // 현재 로그인 사용자의 users 문서 데이터 캐시
 
   if (auth) onAuthStateChanged(auth, async (user) => {
     if (user) {
-      const role = await ensureUserDoc(user, pendingRank);
+      const role = await ensureUserDoc(user, pendingRank, pendingName);
       pendingRank = null;
+      pendingName = null;
       // 내 users 문서(name·rank·status) 로드
       MY_PROFILE = await loadMyProfile(user, role);
       // 승인 대기 상태면 대시보드 진입 차단
