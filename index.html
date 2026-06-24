@@ -346,6 +346,21 @@
   .pb-back-btn:hover { border-color: var(--accent); color: var(--accent); }
   .proj-clickable { cursor: pointer; transition: background .15s, border-color .15s; }
   .proj-clickable:hover { border-color: var(--accent); background: rgba(87,224,154,0.04); }
+  /* 승인 대기 카드 */
+  .pending-card { background: rgba(245,166,35,0.08); border: 1px solid rgba(245,166,35,0.4); border-radius: 13px; padding: 18px 20px; margin-bottom: 18px; }
+  .pending-title { font-size: 14px; font-weight: 700; color: #f5a623; margin-bottom: 14px; }
+  .pending-count { display: inline-block; background: #f5a623; color: #1a1a1a; font-size: 12px; font-weight: 700; padding: 1px 8px; border-radius: 10px; margin-left: 6px; }
+  .pending-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 0; border-top: 1px solid rgba(245,166,35,0.15); flex-wrap: wrap; }
+  .pending-row:first-of-type { border-top: none; }
+  .pending-info { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+  .pending-name { font-size: 14px; font-weight: 700; }
+  .pending-rank { font-size: 12px; color: var(--text-dim); background: var(--panel); padding: 2px 8px; border-radius: 10px; }
+  .pending-email { font-size: 13px; color: var(--text-mute); }
+  .pending-actions { display: flex; gap: 8px; }
+  .pending-approve { background: var(--accent); color: #06231a; border: none; padding: 7px 16px; border-radius: 8px; font-weight: 700; font-size: 13px; cursor: pointer; font-family: var(--font-body); }
+  .pending-approve:hover { filter: brightness(1.05); }
+  .pending-reject { background: transparent; color: var(--danger); border: 1px solid var(--danger); padding: 7px 16px; border-radius: 8px; font-weight: 600; font-size: 13px; cursor: pointer; font-family: var(--font-body); }
+  .pending-reject:hover { background: rgba(255,122,122,0.1); }
   .pj-prog { flex: 1; max-width: 300px; height: 12px; background: rgba(0,0,0,0.25); border-radius: 20px; overflow: hidden; box-shadow: inset 0 1px 3px rgba(0,0,0,0.4); }
   .pj-prog-fill { height: 100%; border-radius: 20px; background: linear-gradient(90deg, #2ee6a0, #57e09a 50%, #a8f05a); box-shadow: 0 0 12px rgba(87,224,154,0.7); transition: width .5s; }
   .pj-prog-pct { font-size: 15px; font-weight: 800; color: var(--accent); text-shadow: 0 0 10px rgba(87,224,154,0.4); }
@@ -1097,6 +1112,7 @@
         <h1>팀원정보</h1>
         <div class="date" id="tmCount"></div>
       </div>
+      <div id="pendingApprovals" class="admin-only" style="display:none;"></div>
       <div id="tmList"><div class="loading">불러오는 중…</div></div>
     </main>
 
@@ -1434,15 +1450,26 @@
   $("tabSignup").addEventListener("click", () => setMode("signup"));
 
   async function ensureUserDoc(user, rank) {
-    const role = ADMIN_EMAILS.includes(user.email) ? "admin" : "member";
+    const isAdminEmail = ADMIN_EMAILS.includes(user.email);
+    const role = isAdminEmail ? "admin" : "member";
     try {
       const ref = doc(db, "users", user.uid);
       const snap = await getDoc(ref);
       if (!snap.exists()) {
-        await setDoc(ref, { name: user.displayName || "", email: user.email, photo: user.photoURL || "", role, rank: rank || "사원", createdAt: serverTimestamp() });
-      } else if (rank && !snap.data().rank) {
-        // 기존 문서에 직급이 없으면 보강
-        await setDoc(ref, { rank }, { merge: true });
+        // 관리자 이메일은 자동 승인, 그 외 신규 가입자는 승인 대기(pending)
+        await setDoc(ref, {
+          name: user.displayName || "", email: user.email, photo: user.photoURL || "",
+          role, rank: rank || "사원",
+          status: isAdminEmail ? "approved" : "pending",
+          createdAt: serverTimestamp()
+        });
+      } else {
+        const d = snap.data();
+        const patch = {};
+        if (rank && !d.rank) patch.rank = rank;
+        // status 필드가 없는 기존 사용자는 승인된 것으로 간주 (하위 호환)
+        if (d.status === undefined) patch.status = isAdminEmail ? "approved" : "approved";
+        if (Object.keys(patch).length) await setDoc(ref, patch, { merge: true });
       }
     } catch (e) { console.warn("users 문서 생략:", e.message); }
     return role;
@@ -1488,9 +1515,10 @@
       if (mode === "signup") {
         if (!name) return showStatus("이름을 입력하세요.", "err");
         pendingRank = $("drank").value;
-        showStatus("계정을 만드는 중…", "ok");
+        showStatus("가입 신청 중…", "ok");
         const cred = await createUserWithEmailAndPassword(auth, email, pw);
         await updateProfile(cred.user, { displayName: name });
+        // 이후 onAuthStateChanged에서 pending 상태를 감지해 승인 대기 안내 후 로그아웃됨
       } else {
         showStatus("로그인 중…", "ok");
         await signInWithEmailAndPassword(auth, email, pw);
@@ -1558,8 +1586,25 @@
     if (user) {
       const role = await ensureUserDoc(user, pendingRank);
       pendingRank = null;
-      // 내 users 문서(name·rank) 로드 — 회원정보 수정 반영
+      // 내 users 문서(name·rank·status) 로드
       MY_PROFILE = await loadMyProfile(user, role);
+      // 승인 대기 상태면 대시보드 진입 차단
+      if (MY_PROFILE.status === "pending") {
+        showStatus("가입 신청이 접수되었습니다. 관리자 승인 후 로그인할 수 있습니다.", "ok");
+        $("loginStage").style.display = "grid";
+        $("dashStage").classList.remove("show");
+        await signOut(auth);
+        MY_PROFILE = null;
+        return;
+      }
+      if (MY_PROFILE.status === "rejected") {
+        showStatus("가입이 거부되었습니다. 관리자에게 문의하세요.", "err");
+        $("loginStage").style.display = "grid";
+        $("dashStage").classList.remove("show");
+        await signOut(auth);
+        MY_PROFILE = null;
+        return;
+      }
       $("loginStage").style.display = "none";
       $("dashStage").classList.add("show");
       $("userName").textContent = MY_PROFILE.name || user.displayName || user.email;
@@ -1575,13 +1620,13 @@
 
   // 내 프로필(users 문서) 로드 — 실패해도 기본값 반환
   async function loadMyProfile(user, role) {
-    const base = { name: user.displayName || "", rank: "사원", email: user.email || "", role };
+    const base = { name: user.displayName || "", rank: "사원", email: user.email || "", role, status: "approved" };
     if (DEMO_MODE || configMissing()) return base;
     try {
       const snap = await getDoc(doc(db, "users", user.uid));
       if (snap.exists()) {
         const d = snap.data();
-        return { name: d.name || base.name, rank: d.rank || base.rank, email: d.email || base.email, role: d.role || role };
+        return { name: d.name || base.name, rank: d.rank || base.rank, email: d.email || base.email, role: d.role || role, status: d.status || "approved" };
       }
     } catch (e) { console.warn("프로필 로드 실패:", e.message); }
     return base;
@@ -1680,7 +1725,8 @@
     renderProjects(projects);
     renderNotices(notices);
     renderWeekly(myWeeklyFinal);
-    renderMembers(members);
+    renderMembers(approvedMembers());
+    renderPendingApprovals();
     MY_WEEKLY_CACHE = myWeeklyFinal || [];
 
     // 알림 배지 계산
@@ -1778,6 +1824,75 @@
 
   const RANK_ORDER = { "이사": 1, "부장": 2, "차장": 3, "대리": 4, "사원": 5 };
 
+  // 승인 대기 사용자 필터
+  function pendingMembers() {
+    return (ALL_MEMBERS || []).filter(m => m.status === "pending");
+  }
+  // 승인된 사용자만 (status 없으면 승인된 것으로 간주 - 하위 호환)
+  function approvedMembers() {
+    return (ALL_MEMBERS || []).filter(m => m.status !== "pending" && m.status !== "rejected");
+  }
+
+  // 승인 대기자 목록 렌더 (관리자만)
+  function renderPendingApprovals() {
+    const box = $("pendingApprovals");
+    if (!box) return;
+    if (CURRENT_ROLE !== "admin") { box.style.display = "none"; return; }
+    const pend = pendingMembers();
+    if (!pend.length) { box.style.display = "none"; box.innerHTML = ""; return; }
+    box.style.display = "";
+    box.innerHTML = `
+      <div class="pending-card">
+        <div class="pending-title">승인 대기 중인 가입 신청 <span class="pending-count">${pend.length}</span></div>
+        ${pend.map(m => {
+          const uid = m.id || m.uid;
+          return `<div class="pending-row">
+            <div class="pending-info">
+              <span class="pending-name">${esc(m.name || "이름없음")}</span>
+              <span class="pending-rank">${esc(m.rank || "")}</span>
+              <span class="pending-email">${esc(m.email || "")}</span>
+            </div>
+            <div class="pending-actions">
+              <button class="pending-approve" data-approve="${esc(uid)}">승인</button>
+              <button class="pending-reject" data-reject="${esc(uid)}">거부</button>
+            </div>
+          </div>`;
+        }).join("")}
+      </div>`;
+    box.querySelectorAll("[data-approve]").forEach(b =>
+      b.addEventListener("click", () => approveMember(b.dataset.approve, true)));
+    box.querySelectorAll("[data-reject]").forEach(b =>
+      b.addEventListener("click", () => approveMember(b.dataset.reject, false)));
+  }
+
+  // 승인/거부 처리
+  async function approveMember(uid, approve) {
+    if (CURRENT_ROLE !== "admin") return;
+    const m = (ALL_MEMBERS || []).find(x => (x.id || x.uid) === uid);
+    const nm = m?.name || "이 사용자";
+    if (approve) {
+      if (!confirm(`${nm} 님의 가입을 승인할까요?`)) return;
+    } else {
+      if (!confirm(`${nm} 님의 가입을 거부할까요?`)) return;
+    }
+    const newStatus = approve ? "approved" : "rejected";
+    if (DEMO_MODE) {
+      if (m) m.status = newStatus;
+      renderPendingApprovals();
+      renderMembers(approvedMembers());
+      return;
+    }
+    if (configMissing()) return;
+    try {
+      await setDoc(doc(db, "users", uid), { status: newStatus }, { merge: true });
+      if (m) m.status = newStatus;
+      renderPendingApprovals();
+      renderMembers(approvedMembers());
+    } catch (e) {
+      alert("처리 실패: " + e.message);
+    }
+  }
+
   function renderMembers(members) {
     const el = $("memberItems");
     if (!members) { el.innerHTML = `<div class="ml-empty">불러올 수 없습니다.</div>`; $("memberCount").textContent = "—"; return; }
@@ -1823,8 +1938,9 @@
   }
 
   function renderMembersView(allWeekly, allTrips) {
+    renderPendingApprovals();
     const box = $("tmList");
-    const members = (ALL_MEMBERS || []).slice().sort((a,b) => (RANK_ORDER[a.rank]||9) - (RANK_ORDER[b.rank]||9));
+    const members = approvedMembers().slice().sort((a,b) => (RANK_ORDER[a.rank]||9) - (RANK_ORDER[b.rank]||9));
     if (!members.length) { box.innerHTML = `<div class="empty">가입한 팀원이 없습니다.</div>`; return; }
     const isAdmin = CURRENT_ROLE === "admin";
     const thisWk = isoWeek(new Date());
