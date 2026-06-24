@@ -3030,7 +3030,7 @@
         </div>
         ${n.body ? `<div class="ntc-body ntc-body-preview">${esc(n.body)}</div>` : ""}
         <div class="ntc-meta">
-          <span class="ntc-author">${esc(n.authorName || "관리자")}</span>
+          <span class="ntc-author">관리자</span>
           <span>·</span>
           <span>${fmtDate(n.createdAt)}</span>
         </div>
@@ -3055,7 +3055,7 @@
     if (!n) return;
     $("ndTitle").innerHTML = `${n.pinned ? '<span class="ntc-pin">고정</span> ' : ''}${esc(n.title || "(제목 없음)")}`;
     $("ndBody").textContent = n.body || "(내용 없음)";
-    $("ndAuthor").textContent = n.authorName || "관리자";
+    $("ndAuthor").textContent = "관리자";
     $("ndDate").textContent = fmtDate(n.createdAt);
     openModal("noticeDetailModal");
   }
@@ -3102,7 +3102,7 @@
         if (n) { n.title = title; n.body = body; n.pinned = pinned; }
       } else {
         const np = { id: "ntc_" + Date.now(), title, body, pinned,
-          authorName: CURRENT_USER?.displayName || "문형범", createdAt: { toDate: () => new Date() } };
+          authorName: "관리자", createdAt: { toDate: () => new Date() } };
         ALL_NOTICES = [np, ...(ALL_NOTICES || [])];
       }
       closeModal("noticeModal"); drawNotices(); renderNotices((ALL_NOTICES||[]).slice(0,5));
@@ -3123,7 +3123,7 @@
       } else {
         await addDoc(collection(db, "notices"), stripUndefined({
           title, body, pinned,
-          authorName: CURRENT_USER?.displayName || "관리자",
+          authorName: "관리자",
           authorUid: CURRENT_USER?.uid || "",
           createdAt: serverTimestamp(),
         }));
