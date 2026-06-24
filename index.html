@@ -352,8 +352,6 @@
   .pj-prog-label { font-size: 13px; font-weight: 700; color: var(--text-dim); flex-shrink: 0; }
   .pb-back-btn { background: var(--panel); border: 1px solid var(--line); color: var(--text); padding: 9px 16px; border-radius: 9px; font-family: var(--font-body); font-size: 13px; font-weight: 600; cursor: pointer; margin-bottom: 16px; }
   .pb-back-btn:hover { border-color: var(--accent); color: var(--accent); }
-  .proj-clickable { cursor: pointer; transition: background .15s, border-color .15s; }
-  .proj-clickable:hover { border-color: var(--accent); background: rgba(87,224,154,0.04); }
   /* 승인 대기 카드 */
   .pending-card { background: rgba(245,166,35,0.08); border: 1px solid rgba(245,166,35,0.4); border-radius: 13px; padding: 18px 20px; margin-bottom: 18px; }
   .pending-title { font-size: 14px; font-weight: 700; color: #f5a623; margin-bottom: 14px; }
@@ -916,7 +914,7 @@
         </button>
         <button data-view="suggestion">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" stroke-linecap="round" stroke-linejoin="round"/></svg>
-          <span class="nav-txt">기타 건의 및 제안<span class="nav-desc">누구나 익명 제안</span></span>
+          <span class="nav-txt">게시판<span class="nav-desc">누구나 자유 게시</span></span>
         </button>
         <button data-view="stats">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3v18h18M7 16l4-5 3 3 5-7" stroke-linecap="round" stroke-linejoin="round"/></svg>
@@ -1157,7 +1155,7 @@
     <!-- 건의 및 제안 -->
     <main class="main view-panel" id="viewSuggestion" style="display:none;">
       <div class="main-head">
-        <h1>기타 건의 및 제안</h1>
+        <h1>게시판</h1>
         <div class="date">팀원들의 소중한 의견을 들려주세요</div>
       </div>
       
@@ -1206,30 +1204,7 @@
         </div>
 
         <div class="help-card">
-          <div class="help-step-num">1단계</div>
-          <h2 class="help-h">팀원 가입하기</h2>
-          <ol class="help-ol">
-            <li>접속 화면에서 <b>'팀원가입'</b> 탭을 누릅니다.</li>
-            <li><b>이름</b>, <b>직급</b>, <b>이메일</b>, <b>비밀번호</b>를 입력합니다. (비밀번호는 6자 이상)</li>
-            <li><b>'팀원가입'</b> 버튼을 누릅니다.</li>
-            <li>"관리자 승인 후 로그인할 수 있습니다" 안내가 나오면 정상입니다.</li>
-            <li>관리자(문형범 이사)가 승인하면 그때부터 로그인할 수 있습니다.</li>
-          </ol>
-          <p class="help-warn">⚠️ 승인 전에는 로그인해도 들어갈 수 없습니다. 가입 후 관리자에게 승인을 요청하세요.</p>
-        </div>
-
-        <div class="help-card">
-          <div class="help-step-num">2단계</div>
-          <h2 class="help-h">로그인하기</h2>
-          <ol class="help-ol">
-            <li>승인이 완료되면 <b>'로그인'</b> 탭에서 이메일·비밀번호를 입력합니다.</li>
-            <li>입력 후 <b>Enter 키</b> 또는 <b>'로그인'</b> 버튼을 누릅니다.</li>
-            <li>자주 쓰는 기기라면 <b>'자동 로그인 유지'</b>를 체크하면 다음부터 자동 로그인됩니다.</li>
-          </ol>
-        </div>
-
-        <div class="help-card">
-          <div class="help-step-num">3단계</div>
+          <div class="help-step-num">설치</div>
           <h2 class="help-h">스마트폰에 앱처럼 설치하기 (선택)</h2>
           <p class="help-p">홈 화면에 아이콘을 만들어 두면 앱처럼 빠르게 열 수 있습니다.</p>
           <h3 class="help-h3">📱 안드로이드 (크롬으로 접속)</h3>
@@ -1274,7 +1249,7 @@
           <h3 class="help-h3">📢 공지사항</h3>
           <p class="help-p">제목을 누르면 전체 내용을 볼 수 있습니다. (작성·수정·삭제는 관리자만)</p>
 
-          <h3 class="help-h3">💡 기타 건의 및 제안</h3>
+          <h3 class="help-h3">💡 게시판</h3>
           <p class="help-p">누구나 익명으로 의견을 남길 수 있습니다. 작성자는 표시되지 않습니다.</p>
         </div>
 
@@ -1293,7 +1268,7 @@
 
         <div class="help-card help-contact">
           <h2 class="help-h" style="margin-top:0;">도움이 필요하면</h2>
-          <p class="help-p">사용 중 문제가 있거나 기능 요청이 있으면 <b>'기타 건의 및 제안'</b>에 남기거나 관리자(문형범 이사)에게 문의하세요.</p>
+          <p class="help-p">사용 중 문제가 있거나 기능 요청이 있으면 <b>'게시판'</b>에 남기거나 관리자(문형범 이사)에게 문의하세요.</p>
         </div>
 
       </div>
@@ -2565,7 +2540,7 @@
       const delBtn = isAdmin ? `<button class="proj-del" data-del="${esc(p.id)}" title="삭제">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" stroke-linecap="round" stroke-linejoin="round"/></svg>
       </button>` : "";
-      return `<div class="proj proj-clickable" data-proj-id="${esc(p.id)}">
+      return `<div class="proj">
         <div class="proj-top">
           <span class="badge ${bcls}">${btxt}</span>
           <span class="proj-name">${esc(p.name || "(이름 없음)")}</span>
@@ -2588,23 +2563,6 @@
         b.addEventListener("click", (e) => { e.stopPropagation(); deleteProject(b.dataset.del); });
       });
     }
-    // 프로젝트 카드 클릭 → 해당 프로젝트 현황으로 이동
-    el.querySelectorAll("[data-proj-id]").forEach(card => {
-      card.addEventListener("click", (e) => {
-        if (e.target.closest("[data-del]")) return;  // 삭제 버튼 클릭은 제외
-        const pid = card.dataset.projId;
-        openSingleProject(pid);
-      });
-    });
-  }
-
-  // 특정 프로젝트만 보여주는 화면으로 이동
-  function openSingleProject(pid) {
-    SINGLE_PROJECT_ID = pid;
-    showView("projectboard");
-    document.querySelectorAll(".nav button").forEach(b => b.classList.remove("active"));
-    const navBtn = document.querySelector('.nav button[data-view="projectboard"]');
-    if (navBtn) navBtn.classList.add("active");
   }
 
   function renderNotices(notices) {
@@ -2787,6 +2745,14 @@
     return m ? (m.name || m.email || "팀원") : uid;  // 가입자면 이름, 아니면 입력된 이름 텍스트 그대로
   }
 
+  // 현재 활성(승인된) 팀원인지 — 삭제된 팀원의 잔존 데이터를 캘린더에서 제외하기 위함
+  function isActiveMember(uid) {
+    if (!uid) return false;
+    const m = (ALL_MEMBERS || []).find(x => (x.id || x.uid) === uid);
+    if (!m) return false;                       // 목록에 없으면(삭제됨) 제외
+    return m.status !== "rejected";             // 거부된 사용자도 제외
+  }
+
   function toDateObj(d) {
     if (!d) return null;
     const dt = d.toDate ? d.toDate() : new Date(d);
@@ -2841,6 +2807,7 @@
         const mon = mondayOfWeek(pl.week);
         const txt = weeklyText(pl).trim();
         if (!txt) return;
+        if (!isActiveMember(pl.uid)) return;  // 삭제된 팀원 제외
         const color = withName ? memberColor(pl.uid) : null;
         const who = withName ? `${memberName(pl.uid)} ` : "";
         push(mon, { type: "task", label: `${who}주간업무`, color, uid: pl.uid, fullText: txt });
@@ -2855,6 +2822,7 @@
     const addTrips = (trips, withName) => {
       (trips || []).forEach(t => {
         const s = toDateObj(t.start); if (!s) return;
+        if (!isActiveMember(t.uid)) return;  // 삭제된 팀원 제외
         const e = t.end ? toDateObj(t.end) : s;
         const who = withName ? `${memberName(t.uid)} ` : "";
         const cur = new Date(s); cur.setHours(0,0,0,0);
@@ -2881,7 +2849,7 @@
     const base = `<span><i class="dot-due"></i> 프로젝트 납기</span><span><i class="dot-start"></i> 프로젝트 시작</span><span><i style="background:#ff9f43"></i> 출장</span><span><i style="background:#1e3a8a"></i> 외근</span><span><i style="background:#4c1d95"></i> 연차</span>`;
     if (calScope === "team") {
       const seen = new Set();
-      const uids = (TEAM_WEEKLY_CACHE || []).map(p => p.uid).filter(u => { if (seen.has(u)) return false; seen.add(u); return true; });
+      const uids = (TEAM_WEEKLY_CACHE || []).map(p => p.uid).filter(u => { if (!isActiveMember(u)) return false; if (seen.has(u)) return false; seen.add(u); return true; });
       const memberDots = uids.map(u => `<span><i style="background:${memberColor(u)}"></i> ${esc(memberName(u))}</span>`).join("");
       $("calLegend").innerHTML = base + (memberDots || `<span><i class="dot-task"></i> 팀 주간업무</span>`);
     } else {
