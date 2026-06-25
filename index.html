@@ -381,6 +381,11 @@
   .wb-col-range { font-size: 10.5px; font-weight: 500; opacity: 0.85; margin-left: 5px; }
   .wb-col-body { padding: 11px 13px; background: var(--panel); border: 1px solid var(--line); border-top: none; border-radius: 0 0 9px 9px; font-size: 13.5px; line-height: 1.65; white-space: pre-wrap; flex: 1; min-height: 60px; }
   .wb-empty { color: var(--text-mute); font-style: italic; }
+  /* 유틸리티 도구 준비중 */
+  .tools-placeholder { text-align: center; padding: 70px 24px; color: var(--text-dim); }
+  .tools-ph-icon { font-size: 52px; margin-bottom: 18px; }
+  .tools-placeholder h2 { font-size: 20px; font-weight: 800; color: var(--text); margin-bottom: 12px; }
+  .tools-placeholder p { font-size: 14px; line-height: 1.8; color: var(--text-mute); }
   @media (max-width: 760px) { .wb-dual { grid-template-columns: 1fr; } }
   .wb-card { background: var(--deep-2); border: 1px solid var(--line); border-radius: 13px; padding: 18px 20px; margin-bottom: 0;  box-shadow: 0 2px 12px rgba(0,0,0,0.28); }
   @media (max-width: 900px) { #wbList { grid-template-columns: 1fr; } }
@@ -529,7 +534,8 @@
   .st-card h3 { font-size: 14px; font-weight: 700; margin-bottom: 4px; }
   .st-card .st-sub { font-size: 12px; color: var(--text-dim); margin-bottom: 18px; }
   /* 가로 막대 (팀원 부하) */
-  .st-bar-row { display: grid; grid-template-columns: 92px 1fr 44px; align-items: center; gap: 12px; margin-bottom: 12px; }
+  .st-bar-row { display: grid; grid-template-columns: 120px 1fr 44px; align-items: center; gap: 12px; margin-bottom: 12px; }
+  .st-bar-rank { font-size: 11px; font-weight: 500; color: var(--text-mute); }
   .st-bar-name { font-size: 13px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .st-bar-track { height: 22px; background: var(--panel); border-radius: 7px; overflow: hidden; display: flex; }
   .st-bar-seg { height: 100%; border-radius: 7px; transition: width .3s ease; }
@@ -996,6 +1002,10 @@
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3v18h18M7 16l4-5 3 3 5-7" stroke-linecap="round" stroke-linejoin="round"/></svg>
           <span class="nav-txt">통계<span class="nav-desc">전체 프로젝트 분석</span></span>
         </button>
+        <button data-view="tools">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14.7 6.3a4 4 0 0 0-5.4 5.4l-6.3 6.3a1.4 1.4 0 0 0 2 2l6.3-6.3a4 4 0 0 0 5.4-5.4l-2.6 2.6-2-2 2.6-2.6z" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          <span class="nav-txt">유틸리티 도구<span class="nav-desc">설계 보조 도구 모음</span></span>
+        </button>
         <button data-view="help">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3M12 17h.01" stroke-linecap="round" stroke-linejoin="round"/></svg>
           <span class="nav-txt">사용자 메뉴얼<span class="nav-desc">앱 사용법 도움말</span></span>
@@ -1279,6 +1289,18 @@
     </main>
 
     <!-- 사용 설명서 (도움말) -->
+    <!-- 유틸리티 도구 (허브) -->
+    <main class="main view-panel" id="viewTools" style="display:none;">
+      <div class="main-head">
+        <h1>유틸리티 도구</h1>
+      </div>
+      <div class="tools-placeholder">
+        <div class="tools-ph-icon">🛠️</div>
+        <h2>준비 중입니다</h2>
+        <p>설계 작업에 필요한 보조 도구들이 이곳에 추가될 예정입니다.<br>각 도구는 별도로 개발되어 순차적으로 연동됩니다.</p>
+      </div>
+    </main>
+
     <main class="main view-panel" id="viewHelp" style="display:none;">
       <div class="main-head">
         <h1>사용자 메뉴얼</h1>
@@ -2574,7 +2596,7 @@
         : `<div class="st-bar-projs"><span class="st-proj-none">진행 중인 프로젝트 없음</span></div>`;
       return `<div class="st-bar-block">
         <div class="st-bar-row">
-          <span class="st-bar-name">${esc(r.name)}</span>
+          <span class="st-bar-name">${esc(r.name)}${r.rank ? ` <span class="st-bar-rank">${esc(r.rank)}</span>` : ""}</span>
           <div class="st-bar-track">
             ${r.total?`<div class="st-bar-seg" style="width:${barW};background:${barColor}" title="총 ${r.total}건 (설계 ${r.design}·영업 ${r.sales}·현장 ${r.field})"></div>`:""}
           </div>
@@ -2639,7 +2661,7 @@
     const entries = Object.entries(byClient).sort((a,b) => b[1].length - a[1].length);
 
     const groups = entries.map(([c, list]) => {
-      const bars = list.map(p => {
+      const bars = sortProjectsByStatus(list).map(p => {
         const s = toMs(p.startDate), e = toMs(p.dueDate);
         const [bcls, btxt] = STATUS_BADGE[effectiveStatus(p)];
         // 담당자 한 줄 (역할별 공통 색상 적용)
@@ -2661,7 +2683,7 @@
           const clipL = s < Y0, clipR = e > Y1;
           barEl = `<div class="gt-track">
             ${todayLine}
-            <div class="gt-bar ${clipL?'clip-l':''} ${clipR?'clip-r':''}" style="left:${left}%;width:${width}%;background:${STATUS_BAR[p.status||'wait']};"></div>
+            <div class="gt-bar ${clipL?'clip-l':''} ${clipR?'clip-r':''}" style="left:${left}%;width:${width}%;background:${STATUS_BAR[effectiveStatus(p)]};"></div>
           </div>`;
         }
         return `<div class="gt-proj">
@@ -2810,6 +2832,7 @@
                 : view === "stats" ? $("viewStats")
                 : view === "suggestion" ? $("viewSuggestion")
                 : view === "help" ? $("viewHelp")
+                : view === "tools" ? $("viewTools")
                 : $("viewHome");
     panel.style.display = "";
     CURRENT_VIEW = view;
@@ -2872,7 +2895,7 @@
         if (boardBtn) boardBtn.click();
         return;
       }
-      if (v === "home" || v === "calendar" || v === "notice" || v === "weekly" || v === "weeklyboard" || v === "project" || v === "projectboard" || v === "members" || v === "stats" || v === "suggestion" || v === "help") {
+      if (v === "home" || v === "calendar" || v === "notice" || v === "weekly" || v === "weeklyboard" || v === "project" || v === "projectboard" || v === "members" || v === "stats" || v === "suggestion" || v === "help" || v === "tools") {
         document.querySelectorAll(".nav button").forEach(b => b.classList.toggle("active", b === btn));
         showView(v);
         if (v === "calendar") setCalScope(calScope);
