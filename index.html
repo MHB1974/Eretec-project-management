@@ -1140,7 +1140,7 @@
         <span class="wk-readonly" id="wkReadonly" style="display:none;">읽기 전용</span>
       </div>
 
-      <section class="card">
+      <section class="card" id="wkPlanCard">
         <div class="card-h">
           <h2 id="wkWho">내 업무</h2>
           <span class="wk-saved-tag" id="wkSavedTag" style="display:none;">저장됨 ✓</span>
@@ -1182,6 +1182,10 @@
           <input type="date" id="tripAddEnd" class="trip-inline-input" title="종료일(생략 시 당일)">
           <input type="text" id="tripAddPlace" class="trip-inline-input trip-add-place" placeholder="목적지/내용">
           <button class="trip-add-btn" id="tripAddRowBtn" type="button">＋ 추가</button>
+        </div>
+        <div class="wk-save-row" id="tripSaveRow" style="display:none;">
+          <span class="wk-hint" id="tripSaveHint">저장하면 캘린더에 바로 반영됩니다.</span>
+          <button class="wk-save-btn" id="tripSaveBtn">저장</button>
         </div>
       </section>
     </main>
@@ -3634,15 +3638,27 @@
     const box = $("wkContent");
     const editArea = $("wkEditArea");
     const own = isOwnWeek();
+    const planCard = $("wkPlanCard");
+    const isAdminSelf = own && CURRENT_ROLE === "admin";
+
+    // 관리자 본인: 주간업무 작성 안 함 → 카드 숨기고 출장/외근/연차만
+    if (isAdminSelf) {
+      if (planCard) planCard.style.display = "none";
+      if ($("tripSaveRow")) $("tripSaveRow").style.display = "";   // 출장 전용 저장 버튼 노출
+      return;
+    }
+    if (planCard) planCard.style.display = "";
+    if ($("tripSaveRow")) $("tripSaveRow").style.display = "none"; // 팀원은 주간업무 저장 버튼으로 일괄 저장
+
     if (own) {
-      // 본인: 금주/차주 인라인 편집
+      // 본인(팀원): 금주/차주 인라인 편집
       box.style.display = "none";
       editArea.style.display = "";
       $("wkInlineThis").value = wkDoc.content || "";
       $("wkInlineNext").value = wkDocNext ? (wkDocNext.content || "") : "";
       $("wkSavedTag").style.display = "none";
     } else {
-      // 타인: 읽기 전용 (금주/차주 가로)
+      // 타인 조회: 읽기 전용 (금주/차주 가로)
       editArea.style.display = "none";
       box.style.display = "";
       const tThis = (wkDoc.content || "").trim();
@@ -3689,6 +3705,29 @@
       docObj.id = null;
     }
   }
+
+  // 출장 전용 저장 (관리자 본인 — 주간업무 없이 출장/외근/연차만)
+  $("tripSaveBtn")?.addEventListener("click", async () => {
+    if (!isOwnWeek()) return;
+    const btn = $("tripSaveBtn");
+    try {
+      btn.textContent = "저장 중…"; btn.disabled = true;
+      const tripRes = await saveTripsBatch();
+      drawTrips(); updateSaveHint();
+      if (!tripRes.ok && tripRes.err) {
+        alert("출장 저장에 실패했습니다: " + tripRes.err);
+      } else {
+        TEAM_TRIPS_CACHE = null;   // 캘린더 갱신
+        btn.textContent = "저장됨 ✓";
+        setTimeout(() => { btn.textContent = "저장"; }, 1500);
+      }
+    } catch (e) {
+      alert("저장 실패: " + e.message);
+      btn.textContent = "저장";
+    } finally {
+      btn.disabled = false;
+    }
+  });
 
   $("wkSaveBtn").addEventListener("click", async () => {
     if (!isOwnWeek()) return;
@@ -3884,16 +3923,19 @@
 
   // 저장되지 않은 변경이 있으면 안내
   function updateSaveHint() {
-    const hint = $("wkSaveHint");
-    if (!hint) return;
     const pending = TRIP_PENDING_ADDS.length + TRIP_PENDING_DELS.size;
-    if (pending > 0) {
-      hint.textContent = `저장 대기: 일정 ${pending}건 변경됨`;
-      hint.style.color = "#f5a623";
-    } else {
-      hint.textContent = "저장하면 주간업무 현황에 바로 반영됩니다.";
-      hint.style.color = "";
-    }
+    const setHint = (hint, baseText) => {
+      if (!hint) return;
+      if (pending > 0) {
+        hint.textContent = `저장 대기: 일정 ${pending}건 변경됨`;
+        hint.style.color = "#f5a623";
+      } else {
+        hint.textContent = baseText;
+        hint.style.color = "";
+      }
+    };
+    setHint($("wkSaveHint"), "저장하면 주간업무 현황에 바로 반영됩니다.");
+    setHint($("tripSaveHint"), "저장하면 캘린더에 바로 반영됩니다.");
   }
 
   // 일괄 저장: 주간업무 텍스트 + 출장 변경 모두 저장
