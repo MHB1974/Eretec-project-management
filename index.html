@@ -534,12 +534,12 @@
   .st-card h3 { font-size: 14px; font-weight: 700; margin-bottom: 4px; }
   .st-card .st-sub { font-size: 12px; color: var(--text-dim); margin-bottom: 18px; }
   /* 가로 막대 (팀원 부하) */
-  .st-bar-row { display: grid; grid-template-columns: 120px 1fr 44px; align-items: center; gap: 12px; margin-bottom: 12px; }
-  .st-bar-rank { font-size: 11px; font-weight: 500; color: var(--text-mute); }
+  .st-bar-row { display: grid; grid-template-columns: 130px 1fr 34px; align-items: center; gap: 14px; margin-bottom: 7px; }
+  .st-bar-rank { font-size: 11px; font-weight: 400; color: var(--text-mute); margin-left: 3px; }
   .st-bar-name { font-size: 13px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .st-bar-track { height: 22px; background: var(--panel); border-radius: 7px; overflow: hidden; display: flex; }
-  .st-bar-seg { height: 100%; border-radius: 7px; transition: width .3s ease; }
-  .st-bar-val { font-size: 13px; font-weight: 700; text-align: right; }
+  .st-bar-track { height: 8px; background: rgba(255,255,255,0.04); border-radius: 999px; overflow: hidden; display: flex; }
+  .st-bar-seg { height: 100%; border-radius: 999px; transition: width .45s cubic-bezier(.4,0,.2,1); }
+  .st-bar-val { font-size: 12px; font-weight: 700; text-align: right; color: var(--text-dim); font-variant-numeric: tabular-nums; }
   .st-legend { display: flex; gap: 16px; margin-top: 16px; flex-wrap: wrap; }
   .st-legend span { font-size: 12px; color: var(--text-dim); display: flex; align-items: center; gap: 6px; }
   .st-legend i { width: 11px; height: 11px; border-radius: 3px; display: inline-block; }
@@ -562,10 +562,10 @@
   .st-client-fill { height: 100%; }
   .st-client-val { font-size: 12px; color: var(--text-dim); text-align: right; }
   /* 팀원 부하: 프로젝트 칩 */
-  .st-bar-block { margin-bottom: 16px; }
-  .st-bar-block .st-bar-row { margin-bottom: 6px; }
-  .st-bar-projs { padding-left: 104px; display: flex; flex-wrap: wrap; gap: 6px; }
-  .st-proj-chip { font-size: 11px; background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 3px 9px; color: var(--text); }
+  .st-bar-block { margin-bottom: 14px; }
+  .st-bar-block .st-bar-row { margin-bottom: 7px; }
+  .st-bar-projs { padding-left: 144px; display: flex; flex-wrap: wrap; gap: 5px; }
+  .st-proj-chip { font-size: 11px; background: rgba(255,255,255,0.03); border: 1px solid var(--line); border-radius: 7px; padding: 3px 9px; color: var(--text-dim); }
   .st-proj-chip em { font-style: normal; color: #ff9f43; font-weight: 600; margin-left: 3px; }
   .st-proj-none { font-size: 11px; color: var(--text-mute); }
   /* 발주처 상세 */
@@ -2598,7 +2598,7 @@
         <div class="st-bar-row">
           <span class="st-bar-name">${esc(r.name)}${r.rank ? ` <span class="st-bar-rank">${esc(r.rank)}</span>` : ""}</span>
           <div class="st-bar-track">
-            ${r.total?`<div class="st-bar-seg" style="width:${barW};background:${barColor}" title="총 ${r.total}건 (설계 ${r.design}·영업 ${r.sales}·현장 ${r.field})"></div>`:""}
+            ${r.total?`<div class="st-bar-seg" style="width:${barW};background:linear-gradient(90deg, ${barColor}cc, ${barColor})" title="총 ${r.total}건 (설계 ${r.design}·영업 ${r.sales}·현장 ${r.field})"></div>`:""}
           </div>
           <span class="st-bar-val">${r.total}</span>
         </div>
