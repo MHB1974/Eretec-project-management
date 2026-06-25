@@ -4027,8 +4027,10 @@
       (trips || []).forEach(t => { (tripsByUid[t.uid] = tripsByUid[t.uid] || []).push(t); });
     }
 
-    // 팀원 순서대로 카드 생성 (직급순, 승인된 팀원만)
-    const members = approvedMembers().slice().sort((a,b) => (RANK_ORDER[a.rank]||9) - (RANK_ORDER[b.rank]||9));
+    // 팀원 순서대로 카드 생성 (직급순, 승인된 팀원만, 관리자 제외)
+    const members = approvedMembers()
+      .filter(m => m.role !== "admin")
+      .slice().sort((a,b) => (RANK_ORDER[a.rank]||9) - (RANK_ORDER[b.rank]||9));
     if (members.length === 0) { box.innerHTML = `<div class="empty">팀원 정보가 없습니다.</div>`; return; }
 
     const isThisWeek = wk === isoWeek(new Date());
