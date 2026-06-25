@@ -597,8 +597,8 @@
   .gt-pname { font-size: 12.5px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .gt-pname .badge { margin-right: 4px; }
   .gt-people { font-size: 11px; color: #ff9f43; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 2px; }
-  .gt-track { position: relative; height: 16px; background: repeating-linear-gradient(90deg, transparent 0, transparent calc(100%/12 - 1px), rgba(255,255,255,0.05) calc(100%/12 - 1px), rgba(255,255,255,0.05) calc(100%/12)); border-radius: 999px; }
-  .gt-bar { position: absolute; top: 5px; height: 6px; border-radius: 999px; min-width: 6px; transition: width .45s cubic-bezier(.4,0,.2,1); }
+  .gt-track { position: relative; height: 20px; background: repeating-linear-gradient(90deg, transparent 0, transparent calc(100%/12 - 1px), rgba(255,255,255,0.05) calc(100%/12 - 1px), rgba(255,255,255,0.05) calc(100%/12)); border-radius: 999px; }
+  .gt-bar { position: absolute; top: 5.5px; height: 9px; border-radius: 999px; min-width: 6px; transition: width .45s cubic-bezier(.4,0,.2,1); }
   .gt-bar.clip-l { border-top-left-radius: 0; border-bottom-left-radius: 0; }
   .gt-bar.clip-r { border-top-right-radius: 0; border-bottom-right-radius: 0; }
   .gt-today { position: absolute; top: 0; bottom: 0; width: 2px; background: #ffd24d; z-index: 2; opacity: 0.7; }
@@ -2658,7 +2658,13 @@
       if (!byClient[c]) byClient[c] = [];
       byClient[c].push(p);
     });
-    const entries = Object.entries(byClient).sort((a,b) => b[1].length - a[1].length);
+    // 발주처 정렬: 각 발주처의 가장 급한 상태(지연>진행중>대기>완료) 기준, 같으면 프로젝트 수 많은 순
+    const groupRank = (list) => Math.min(...list.map(p => STATUS_SORT[effectiveStatus(p)] ?? 9));
+    const entries = Object.entries(byClient).sort((a, b) => {
+      const ra = groupRank(a[1]), rb = groupRank(b[1]);
+      if (ra !== rb) return ra - rb;
+      return b[1].length - a[1].length;
+    });
 
     const groups = entries.map(([c, list]) => {
       const bars = sortProjectsByStatus(list).map(p => {
