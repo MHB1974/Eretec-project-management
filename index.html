@@ -3729,13 +3729,12 @@
   function drawTrips() {
     const box = $("tripList");
     const [wkStart, wkEnd] = currentWeekRange();
-    // 입력 칸 기본값을 현재 보는 주의 월요일로 설정 (값이 비어있을 때만)
-    const fmtDate = (d) => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
-    if ($("tripAddStart") && !$("tripAddStart").value) {
-      $("tripAddStart").min = fmtDate(wkStart);
-      $("tripAddStart").max = fmtDate(wkEnd);
-      $("tripAddEnd").min = fmtDate(wkStart);
-      $("tripAddEnd").max = fmtDate(wkEnd);
+    // 날짜 입력에 제약(min/max)을 두지 않음 — 자유롭게 선택 가능
+    if ($("tripAddStart")) {
+      $("tripAddStart").removeAttribute("min");
+      $("tripAddStart").removeAttribute("max");
+      $("tripAddEnd").removeAttribute("min");
+      $("tripAddEnd").removeAttribute("max");
     }
     // 이번 주에 걸치는 일정만 필터
     const visible = TRIPS_CACHE.filter(t => {
@@ -3795,12 +3794,6 @@
     if (!start) { alert("시작일을 선택하세요."); return; }
     if (!place) { alert("목적지/내용을 입력하세요."); return; }
     if (end && end < start) { alert("종료일이 시작일보다 빠릅니다."); return; }
-    // 이번 주에 걸치는지 확인 (안 걸치면 경고만, 추가는 허용)
-    const [wkStart, wkEnd] = currentWeekRange();
-    const s = new Date(start), e = end ? new Date(end) : s;
-    if (!rangesOverlap(s, e, wkStart, wkEnd)) {
-      if (!confirm("이 일정은 현재 보고 있는 주에 걸치지 않습니다. 그래도 추가할까요?")) return;
-    }
     TRIP_PENDING_ADDS.push({
       tempId: "tmp_" + Date.now() + "_" + Math.random().toString(36).slice(2,7),
       type, start: new Date(start), end: end ? new Date(end) : null, place
