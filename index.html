@@ -1902,13 +1902,67 @@
   // 진행률: 전체 일정(시작~납기) 대비 현재 시점 경과 비율
   function autoProgress(p) {
     if (p.status === "done") return 100;
+    // 공정 그리드(주차별 채운 칸) 기준: 전체 계획된 칸 중 현재 주차까지 와야 할 칸의 비율
+    const weeks = projectWeeks(p);
+    const tasks = p.designTasks || [];
+    if (!weeks.length || !tasks.length) {
+      // 그리드가 없으면 기존 방식(시작~납기 시간 경과율)으로 대체
+      const s = p.startDate ? (p.startDate.toDate ? p.startDate.toDate() : new Date(p.startDate)) : null;
+      const e = p.dueDate ? (p.dueDate.toDate ? p.dueDate.toDate() : new Date(p.dueDate)) : null;
+      if (!s || !e || isNaN(s) || isNaN(e) || e <= s) return 0;
+      const now = new Date();
+      if (now <= s) return 0;
+      if (now >= e) return 100;
+      return Math.round(((now - s) / (e - s)) * 100);
+    }
+    // 채워진 모든 칸(계획된 작업) 수집
+    const filledIdx = new Set();
+    tasks.forEach(tk => taskCells(tk).forEach(i => filledIdx.add(i)));
+    const totalFilled = filledIdx.size;
+    if (totalFilled === 0) return 0;
+    // 현재 주차의 그리드 인덱스 찾기
+    const nowWk = nowWeekKey();
+    let nowIdx = weeks.indexOf(nowWk);
+    // 현재 주차가 그리드 범위를 벗어나면: 시작 전=0, 끝난 후=전체
+    if (nowIdx === -1) {
+      // weeks 첫칸/마지막칸과 현재 시점 비교
+      const firstStart = projectStartDate(p);
+      const now = new Date();
+      if (firstStart && now < firstStart) return 0;
+      nowIdx = weeks.length - 1;  // 기간이 지났으면 전체로 간주
+    }
+    // 현재 주차까지(포함) 채워진 칸 수
+    let doneCells = 0;
+    filledIdx.forEach(i => { if (i <= nowIdx) doneCells++; });
+    return Math.round((doneCells / totalFilled) * 100);
+  }
+  // 프로젝트 시작일 Date 객체
+  function projectStartDate(p) {
     const s = p.startDate ? (p.startDate.toDate ? p.startDate.toDate() : new Date(p.startDate)) : null;
+    return (s && !isNaN(s)) ? s : null;
+  }
+  // 상태 정렬 순서: 지연 → 진행중 → 대기 → 완료
+  const STATUS_SORT = { late: 0, run: 1, wait: 2, done: 3 };
+  // 실제 표시/정렬용 상태: 완료가 아닌데 납기가 지났으면 '지연'으로 간주
+  function effectiveStatus(p) {
+    if (p.status === "done") return "done";
     const e = p.dueDate ? (p.dueDate.toDate ? p.dueDate.toDate() : new Date(p.dueDate)) : null;
-    if (!s || !e || isNaN(s) || isNaN(e) || e <= s) return 0;
-    const now = new Date();
-    if (now <= s) return 0;
-    if (now >= e) return 100;
-    return Math.round(((now - s) / (e - s)) * 100);
+    if (e && !isNaN(e)) {
+      const today = new Date(); today.setHours(0,0,0,0);
+      if (e < today) return "late";
+    }
+    return p.status || "wait";
+  }
+  function sortProjectsByStatus(list) {
+    return (list || []).slice().sort((a, b) => {
+      const oa = STATUS_SORT[effectiveStatus(a)] ?? 9;
+      const ob = STATUS_SORT[effectiveStatus(b)] ?? 9;
+      if (oa !== ob) return oa - ob;
+      // 같은 상태면 납기일 빠른 순
+      const da = a.dueDate ? (a.dueDate.toDate ? a.dueDate.toDate().getTime() : new Date(a.dueDate).getTime()) : Infinity;
+      const db = b.dueDate ? (b.dueDate.toDate ? b.dueDate.toDate().getTime() : new Date(b.dueDate).getTime()) : Infinity;
+      return da - db;
+    });
   }
   function isoWeek(date = new Date()) {
     const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
@@ -2271,7 +2325,7 @@
             </div>`).join("") + `</div>`
         : `<div class="md-empty">출장/외근/연차 기록이 없습니다.</div>`;
       const projCard = (p) => {
-        const [bcls, btxt] = STATUS_BADGE[p.status || "wait"];
+        const [bcls, btxt] = STATUS_BADGE[effectiveStatus(p)];
         const pct = autoProgress(p);
         const role = [];
         const des = p.designers || (p.owner?[p.owner]:[]);
@@ -2587,7 +2641,7 @@
     const groups = entries.map(([c, list]) => {
       const bars = list.map(p => {
         const s = toMs(p.startDate), e = toMs(p.dueDate);
-        const [bcls, btxt] = STATUS_BADGE[p.status || "wait"];
+        const [bcls, btxt] = STATUS_BADGE[effectiveStatus(p)];
         // 담당자 한 줄 (역할별 공통 색상 적용)
         const des = (p.designers || (p.owner?[p.owner]:[])).filter(Boolean);
         const parts = [];
@@ -2674,11 +2728,11 @@
     if (!projects) { el.innerHTML = `<div class="empty">프로젝트를 불러올 수 없습니다. Firestore 설정과 로그인을 확인하세요.</div>`; return; }
     ALL_PROJECTS = projects;
     if (projects.length === 0) { el.innerHTML = `<div class="empty">등록된 프로젝트가 없습니다.${CURRENT_ROLE==='admin' ? ' ‘+ 프로젝트 생성’으로 등록하세요.' : ''}</div>`; return; }
-    // 사이드바 '프로젝트 현황'과 동일한 순서로 표시
-    const sorted = projects;
+    // 상태순 정렬: 지연 → 진행중 → 대기 → 완료
+    const sorted = sortProjectsByStatus(projects);
     const isAdmin = CURRENT_ROLE === "admin";
     el.innerHTML = sorted.map(p => {
-      const st = p.status || "wait";
+      const st = effectiveStatus(p);
       const [bcls, btxt] = STATUS_BADGE[st];
       const n = daysUntil(p.dueDate);
       const dd = ddLabel(n);
@@ -4776,7 +4830,7 @@
     const box = $("pbBoard");
     if (!ALL_PROJECTS.length) { box.innerHTML = `<div class="empty">등록된 프로젝트가 없습니다.</div>`; return; }
     // 단일 프로젝트 보기 모드면 해당 프로젝트만
-    let projectsToShow = ALL_PROJECTS;
+    let projectsToShow = sortProjectsByStatus(ALL_PROJECTS);
     let backBtnHtml = "";
     if (SINGLE_PROJECT_ID) {
       const one = ALL_PROJECTS.find(p => p.id === SINGLE_PROJECT_ID);
@@ -4794,7 +4848,7 @@
       const pct = autoProgress(p);
       const tasks = p.designTasks || [];
       const nowWk = nowWeekKey();
-      const [bcls, btxt] = STATUS_BADGE[p.status || "wait"];
+      const [bcls, btxt] = STATUS_BADGE[effectiveStatus(p)];
 
       let gridHtml = "";
       if (weeks.length && tasks.length) {
