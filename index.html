@@ -328,6 +328,18 @@
   .wk-toolbar label { font-size: 13px; color: var(--text-dim); }
   #wkInline { width: 100%; margin-top: 12px; padding: 14px 16px; background: var(--panel); border: 1px solid var(--line); border-radius: 10px; color: var(--text); font-family: var(--font-body); font-size: 14px; line-height: 1.7; resize: vertical; }
   #wkInline:focus { outline: none; border-color: var(--accent); }
+  /* 금주/차주 2칸 가로 배치 */
+  .wk-dual { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-top: 12px; }
+  .wk-col { display: flex; flex-direction: column; }
+  .wk-col-head { font-size: 13px; font-weight: 700; padding: 7px 12px; border-radius: 8px 8px 0 0; }
+  .wk-col-this { background: rgba(87,224,154,0.14); color: var(--accent); }
+  .wk-col-next { background: rgba(77,184,232,0.14); color: #4db8e8; }
+  .wk-col-range { font-size: 11px; font-weight: 500; opacity: 0.85; margin-left: 6px; }
+  .wk-dual textarea { width: 100%; padding: 13px 15px; background: var(--panel); border: 1px solid var(--line); border-top: none; border-radius: 0 0 10px 10px; color: var(--text); font-family: var(--font-body); font-size: 14px; line-height: 1.7; resize: vertical; box-sizing: border-box; }
+  .wk-dual textarea:focus { outline: none; border-color: var(--accent); }
+  @media (max-width: 800px) { .wk-dual { grid-template-columns: 1fr; } }
+  .wk-ro-body { padding: 13px 15px; background: var(--panel); border: 1px solid var(--line); border-top: none; border-radius: 0 0 10px 10px; font-size: 14px; line-height: 1.7; white-space: pre-wrap; min-height: 80px; }
+  .wk-ro-empty { color: var(--text-mute); font-style: italic; }
   .wk-save-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 12px; flex-wrap: wrap; }
   .wk-hint { font-size: 12px; color: var(--text-mute); }
   .wk-save-btn { font-size: 14px; font-weight: 700; color: #06231a; background: var(--accent); border: none; border-radius: 9px; padding: 11px 26px; cursor: pointer; font-family: var(--font-body); }
@@ -360,7 +372,16 @@
   .trip-row.pending-del { opacity: 0.45; text-decoration: line-through; }
 
   /* 주간업무 현황 보드 */
-  #wbList { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; }
+  #wbList { display: grid; grid-template-columns: 1fr; gap: 12px; }
+  .wb-dual { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 10px; }
+  .wb-col { display: flex; flex-direction: column; }
+  .wb-col-head { font-size: 12px; font-weight: 700; padding: 6px 11px; border-radius: 8px 8px 0 0; }
+  .wb-col-this { background: rgba(87,224,154,0.14); color: var(--accent); }
+  .wb-col-next { background: rgba(77,184,232,0.14); color: #4db8e8; }
+  .wb-col-range { font-size: 10.5px; font-weight: 500; opacity: 0.85; margin-left: 5px; }
+  .wb-col-body { padding: 11px 13px; background: var(--panel); border: 1px solid var(--line); border-top: none; border-radius: 0 0 9px 9px; font-size: 13.5px; line-height: 1.65; white-space: pre-wrap; flex: 1; min-height: 60px; }
+  .wb-empty { color: var(--text-mute); font-style: italic; }
+  @media (max-width: 760px) { .wb-dual { grid-template-columns: 1fr; } }
   .wb-card { background: var(--deep-2); border: 1px solid var(--line); border-radius: 13px; padding: 18px 20px; margin-bottom: 0;  box-shadow: 0 2px 12px rgba(0,0,0,0.28); }
   @media (max-width: 900px) { #wbList { grid-template-columns: 1fr; } }
   .wb-head { display: flex; align-items: center; gap: 11px; margin-bottom: 12px; }
@@ -1126,7 +1147,16 @@
         </div>
         <div id="wkContent"><div class="loading">불러오는 중…</div></div>
         <div id="wkEditArea" style="display:none;">
-          <textarea id="wkInline" rows="9" placeholder="이번 주 할 일 / 한 일을 자유롭게 적어주세요.&#10;예)&#10;- KAI 차폐 패널 배치도 작성&#10;- 한화 견적서 검토 및 발송&#10;- KIAPI 현장 실측 정리"></textarea>
+          <div class="wk-dual">
+            <div class="wk-col">
+              <div class="wk-col-head wk-col-this">금주 <span class="wk-col-range" id="wkThisRange"></span></div>
+              <textarea id="wkInlineThis" rows="9" placeholder="금주(이번 주) 할 일 / 한 일을 적어주세요.&#10;예)&#10;- KAI 차폐 패널 배치도 작성&#10;- 한화 견적서 검토 및 발송"></textarea>
+            </div>
+            <div class="wk-col">
+              <div class="wk-col-head wk-col-next">차주 <span class="wk-col-range" id="wkNextRange"></span></div>
+              <textarea id="wkInlineNext" rows="9" placeholder="차주(다음 주) 예정 업무를 적어주세요.&#10;예)&#10;- KIAPI 현장 실측&#10;- 설계 검토 회의"></textarea>
+            </div>
+          </div>
           <div class="wk-save-row">
             <span class="wk-hint" id="wkSaveHint">저장하면 주간업무 현황에 바로 반영됩니다.</span>
             <button class="wk-save-btn" id="wkSaveBtn">저장</button>
@@ -3483,7 +3513,8 @@
   /* ─────────── 주간업무 페이지 ─────────── */
   let wkDate = new Date();        // 현재 보고 있는 주
   let wkViewUid = null;           // 보고 있는 대상 (null = 본인)
-  let wkDoc = null;               // 현재 주간업무 문서 {id, uid, week, tasks}
+  let wkDoc = null;               // 금주 주간업무 문서 {id, uid, week, content}
+  let wkDocNext = null;           // 차주 주간업무 문서
   let wkSaveTimer = null;
 
   // 주차 라벨: "2026년 6월 셋째 주"
@@ -3526,6 +3557,17 @@
   }
 
   function currentWeekStr() { return isoWeek(wkDate); }
+  // 차주(다음 주) 날짜와 주 문자열
+  function nextWeekDate() { const d = new Date(wkDate); d.setDate(d.getDate() + 7); return d; }
+  function nextWeekStr() { return isoWeek(nextWeekDate()); }
+  // 주 범위 짧은 표시 (예: 6/30~7/6)
+  function weekRangeShort(date) {
+    const monday = new Date(date);
+    const day = monday.getDay() || 7;
+    monday.setDate(monday.getDate() - (day - 1));
+    const sunday = new Date(monday); sunday.setDate(monday.getDate() + 6);
+    return `${monday.getMonth()+1}/${monday.getDate()}~${sunday.getMonth()+1}/${sunday.getDate()}`;
+  }
   function isOwnWeek() { return !wkViewUid; }
   function targetUid() { return wkViewUid || CURRENT_USER?.uid; }
 
@@ -3545,37 +3587,45 @@
     const own = isOwnWeek();
     $("wkWho").textContent = own ? "내 업무" : `${memberName(uid)}님의 업무`;
     $("wkReadonly").style.display = own ? "none" : "";
+    // 금주/차주 범위 라벨
+    if ($("wkThisRange")) $("wkThisRange").textContent = weekRangeShort(wkDate);
+    if ($("wkNextRange")) $("wkNextRange").textContent = weekRangeShort(nextWeekDate());
 
     const box = $("wkContent");
     box.innerHTML = `<div class="loading">불러오는 중…</div>`;
+    const thisWk = currentWeekStr(), nextWk = nextWeekStr();
 
     if (DEMO_MODE) {
-      let txt = "";
+      let txtThis = "", txtNext = "";
       if (own) {
-        const pl = (MY_WEEKLY_CACHE || []).find(p => p.week === currentWeekStr());
-        txt = weeklyText(pl);
+        txtThis = weeklyText((MY_WEEKLY_CACHE || []).find(p => p.week === thisWk));
+        txtNext = weeklyText((MY_WEEKLY_CACHE || []).find(p => p.week === nextWk));
       } else {
-        txt = weeklyText({ tasks: DEMO_WEEKLY[uid] || [] });
+        txtThis = weeklyText({ tasks: DEMO_WEEKLY[uid] || [] });
       }
-      wkDoc = { id: null, uid, week: currentWeekStr(), content: txt };
+      wkDoc = { id: null, uid, week: thisWk, content: txtThis };
+      wkDocNext = { id: null, uid, week: nextWk, content: txtNext };
       drawWeeklyContent();
       loadTrips(uid, own);
       return;
     }
     if (configMissing()) {
-      wkDoc = { id: null, uid, week: currentWeekStr(), content: "" };
+      wkDoc = { id: null, uid, week: thisWk, content: "" };
+      wkDocNext = { id: null, uid, week: nextWk, content: "" };
       drawWeeklyContent();
       loadTrips(uid, own);
       return;
     }
-    const found = await safeGetDocs(query(collection(db, "weekly_plans"),
-      where("uid", "==", uid), where("week", "==", currentWeekStr())));
-    if (found && found.length) {
-      wkDoc = found[0];
-      wkDoc.content = weeklyText(wkDoc);
-    } else {
-      wkDoc = { id: null, uid, week: currentWeekStr(), content: "" };
-    }
+    // 금주
+    const foundThis = await safeGetDocs(query(collection(db, "weekly_plans"),
+      where("uid", "==", uid), where("week", "==", thisWk)));
+    wkDoc = (foundThis && foundThis.length) ? { ...foundThis[0], content: weeklyText(foundThis[0]) }
+                                            : { id: null, uid, week: thisWk, content: "" };
+    // 차주
+    const foundNext = await safeGetDocs(query(collection(db, "weekly_plans"),
+      where("uid", "==", uid), where("week", "==", nextWk)));
+    wkDocNext = (foundNext && foundNext.length) ? { ...foundNext[0], content: weeklyText(foundNext[0]) }
+                                                : { id: null, uid, week: nextWk, content: "" };
     drawWeeklyContent();
     loadTrips(uid, own);
   }
@@ -3583,33 +3633,71 @@
   function drawWeeklyContent() {
     const box = $("wkContent");
     const editArea = $("wkEditArea");
-    const txt = (wkDoc.content || "").trim();
     const own = isOwnWeek();
     if (own) {
-      // 본인 주: 인라인 편집 영역 표시
+      // 본인: 금주/차주 인라인 편집
       box.style.display = "none";
       editArea.style.display = "";
-      $("wkInline").value = wkDoc.content || "";
+      $("wkInlineThis").value = wkDoc.content || "";
+      $("wkInlineNext").value = wkDocNext ? (wkDocNext.content || "") : "";
       $("wkSavedTag").style.display = "none";
     } else {
-      // 타인 주: 읽기 전용
+      // 타인: 읽기 전용 (금주/차주 가로)
       editArea.style.display = "none";
       box.style.display = "";
-      box.innerHTML = txt ? `<div class="wk-text">${esc(txt)}</div>` : `<div class="empty">작성한 업무가 없습니다.</div>`;
+      const tThis = (wkDoc.content || "").trim();
+      const tNext = (wkDocNext?.content || "").trim();
+      box.innerHTML = `<div class="wk-dual">
+        <div class="wk-col">
+          <div class="wk-col-head wk-col-this">금주 <span class="wk-col-range">${weekRangeShort(wkDate)}</span></div>
+          <div class="wk-ro-body">${tThis ? esc(tThis) : '<span class="wk-ro-empty">작성한 업무가 없습니다.</span>'}</div>
+        </div>
+        <div class="wk-col">
+          <div class="wk-col-head wk-col-next">차주 <span class="wk-col-range">${weekRangeShort(nextWeekDate())}</span></div>
+          <div class="wk-ro-body">${tNext ? esc(tNext) : '<span class="wk-ro-empty">작성한 업무가 없습니다.</span>'}</div>
+        </div>
+      </div>`;
     }
   }
 
   // 인라인 저장
+  // 한 주 문서 저장 헬퍼 (내용 비면 기존 문서 삭제)
+  async function saveOneWeek(docObj, content) {
+    docObj.content = content;
+    if (DEMO_MODE) {
+      const wk = docObj.week;
+      const others = (MY_WEEKLY_CACHE || []).filter(p => p.week !== wk);
+      MY_WEEKLY_CACHE = content ? [...others, { id: "demo_wk_" + wk, uid: docObj.uid, week: wk, content }] : others;
+      return;
+    }
+    if (content) {
+      if (docObj.id) {
+        await setDoc(doc(db, "weekly_plans", docObj.id), {
+          uid: docObj.uid, name: CURRENT_USER?.displayName || "", week: docObj.week,
+          content, updatedAt: serverTimestamp()
+        }, { merge: true });
+      } else {
+        const ref = await addDoc(collection(db, "weekly_plans"), {
+          uid: docObj.uid, name: CURRENT_USER?.displayName || "", week: docObj.week,
+          content, createdAt: serverTimestamp()
+        });
+        docObj.id = ref.id;
+      }
+    } else if (docObj.id) {
+      // 내용을 모두 지웠으면 문서 삭제
+      await deleteDoc(doc(db, "weekly_plans", docObj.id));
+      docObj.id = null;
+    }
+  }
+
   $("wkSaveBtn").addEventListener("click", async () => {
     if (!isOwnWeek()) return;
-    const content = $("wkInline").value.trim();
-    wkDoc.content = content;
+    const contentThis = $("wkInlineThis").value.trim();
+    const contentNext = $("wkInlineNext").value.trim();
     const btn = $("wkSaveBtn");
     if (DEMO_MODE) {
-      const wk = currentWeekStr();
-      const others = (MY_WEEKLY_CACHE || []).filter(p => p.week !== wk);
-      MY_WEEKLY_CACHE = content ? [...others, { id: "demo_wk_" + wk, uid: wkDoc.uid, week: wk, content }] : others;
-      // 출장도 일괄 저장
+      await saveOneWeek(wkDoc, contentThis);
+      await saveOneWeek(wkDocNext, contentNext);
       const tripRes = await saveTripsBatch();
       drawTrips(); updateSaveHint();
       $("wkSavedTag").style.display = "";
@@ -3621,19 +3709,8 @@
     if (configMissing()) { alert("Firebase 키가 설정되지 않아 저장할 수 없습니다."); return; }
     try {
       btn.textContent = "저장 중…"; btn.disabled = true;
-      if (wkDoc.id) {
-        await setDoc(doc(db, "weekly_plans", wkDoc.id), {
-          uid: wkDoc.uid, name: CURRENT_USER?.displayName || "", week: wkDoc.week,
-          content, updatedAt: serverTimestamp()
-        }, { merge: true });
-      } else {
-        const ref = await addDoc(collection(db, "weekly_plans"), {
-          uid: wkDoc.uid, name: CURRENT_USER?.displayName || "", week: wkDoc.week,
-          content, createdAt: serverTimestamp()
-        });
-        wkDoc.id = ref.id;
-      }
-      // 출장 일괄 저장
+      await saveOneWeek(wkDoc, contentThis);
+      await saveOneWeek(wkDocNext, contentNext);
       const tripRes = await saveTripsBatch();
       drawTrips(); updateSaveHint();
       if (!tripRes.ok && tripRes.err) {
@@ -3651,14 +3728,16 @@
     }
   });
 
-  // 저장 후 홈 카드/캘린더 캐시 갱신 (이번 주 본인일 때)
+  // 저장 후 홈 카드/캘린더 캐시 갱신
   function syncWeeklyViews() {
     if (!isOwnWeek()) return;
-    if (currentWeekStr() === isoWeek(new Date())) {
-      const copy = { id: wkDoc.id, uid: wkDoc.uid, week: wkDoc.week, content: wkDoc.content };
-      MY_WEEKLY_CACHE = wkDoc.content ? [copy] : [];
-      renderWeekly(MY_WEEKLY_CACHE);   // 홈 "내 이번주 업무" 카드
-    }
+    const realThisWk = isoWeek(new Date());
+    // 금주/차주 중 실제 이번 주에 해당하는 것을 홈 카드에 반영
+    const cache = [];
+    if (wkDoc?.content) cache.push({ id: wkDoc.id, uid: wkDoc.uid, week: wkDoc.week, content: wkDoc.content });
+    if (wkDocNext?.content) cache.push({ id: wkDocNext.id, uid: wkDocNext.uid, week: wkDocNext.week, content: wkDocNext.content });
+    MY_WEEKLY_CACHE = cache;
+    renderWeekly(MY_WEEKLY_CACHE.filter(p => p.week === realThisWk));   // 홈 "내 이번주 업무" 카드
     TEAM_WEEKLY_CACHE = null;          // 팀 캘린더 다음 열람 시 다시 로드
   }
 
@@ -3878,15 +3957,17 @@
     const box = $("wbList");
     box.innerHTML = `<div class="loading">불러오는 중…</div>`;
     const wk = isoWeek(wbDate);
+    const nextDate = new Date(wbDate); nextDate.setDate(nextDate.getDate() + 7);
+    const nextWk = isoWeek(nextDate);
 
-    // 주간업무 + 출장 데이터 수집
-    let plansByUid = {}, tripsByUid = {};
+    // 주간업무(금주/차주) + 출장 데이터 수집
+    let plansByUid = {}, plansNextByUid = {}, tripsByUid = {};
     if (DEMO_MODE) {
       const thisWk = isoWeek(new Date());
-      // 본인: 해당 주의 작성 내용
       const mine = (MY_WEEKLY_CACHE || []).find(p => p.week === wk);
       if (mine) plansByUid[CURRENT_USER.uid] = weeklyText(mine);
-      // 팀원: 이번 주에만 샘플 데이터 표시 (작성 연동 데모)
+      const mineNext = (MY_WEEKLY_CACHE || []).find(p => p.week === nextWk);
+      if (mineNext) plansNextByUid[CURRENT_USER.uid] = weeklyText(mineNext);
       if (wk === thisWk) {
         Object.entries(DEMO_WEEKLY).forEach(([uid, tasks]) => {
           if (uid !== CURRENT_USER.uid) plansByUid[uid] = weeklyText({ tasks });
@@ -3894,16 +3975,18 @@
       }
       Object.entries(DEMO_TRIPS).forEach(([uid, trips]) => { tripsByUid[uid] = trips; });
     } else if (!configMissing()) {
-      const [plans, trips] = await Promise.all([
+      const [plans, plansNext, trips] = await Promise.all([
         safeGetDocs(query(collection(db, "weekly_plans"), where("week", "==", wk))),
+        safeGetDocs(query(collection(db, "weekly_plans"), where("week", "==", nextWk))),
         safeGetDocs(collection(db, "trips")),
       ]);
       (plans || []).forEach(p => { plansByUid[p.uid] = weeklyText(p); });
+      (plansNext || []).forEach(p => { plansNextByUid[p.uid] = weeklyText(p); });
       (trips || []).forEach(t => { (tripsByUid[t.uid] = tripsByUid[t.uid] || []).push(t); });
     }
 
-    // 팀원 순서대로 카드 생성 (직급순)
-    const members = (ALL_MEMBERS || []).slice().sort((a,b) => (RANK_ORDER[a.rank]||9) - (RANK_ORDER[b.rank]||9));
+    // 팀원 순서대로 카드 생성 (직급순, 승인된 팀원만)
+    const members = approvedMembers().slice().sort((a,b) => (RANK_ORDER[a.rank]||9) - (RANK_ORDER[b.rank]||9));
     if (members.length === 0) { box.innerHTML = `<div class="empty">팀원 정보가 없습니다.</div>`; return; }
 
     const isThisWeek = wk === isoWeek(new Date());
@@ -3912,15 +3995,24 @@
       const nm = m.name || m.email || "팀원";
       const isAdmin = m.role === "admin";
       const txt = (plansByUid[uid] || "").trim();
+      const txtNext = (plansNextByUid[uid] || "").trim();
       const trips = (tripsByUid[uid] || []).filter(t => {
-        // 이번 주에 걸치는 출장만
         const s = toDateObj(t.start); if (!s) return false;
         const e = t.end ? toDateObj(t.end) : s;
         const mon = mondayOfWeek(wk); const sun = new Date(mon); sun.setDate(mon.getDate() + 6);
         return e >= mon && s <= sun;
       });
       const status = txt ? `<span class="wb-done">작성 완료</span>` : `<span class="wb-missing">미작성</span>`;
-      const body = txt ? `<div class="wb-body">${esc(txt)}</div>` : `<div class="wb-body" style="color:var(--text-mute);">${isThisWeek ? "아직 작성하지 않았습니다." : "작성 내역이 없습니다."}</div>`;
+      const dualBody = `<div class="wb-dual">
+        <div class="wb-col">
+          <div class="wb-col-head wb-col-this">금주 <span class="wb-col-range">${weekRangeShort(wbDate)}</span></div>
+          <div class="wb-col-body">${txt ? esc(txt) : `<span class="wb-empty">${isThisWeek ? "미작성" : "작성 내역 없음"}</span>`}</div>
+        </div>
+        <div class="wb-col">
+          <div class="wb-col-head wb-col-next">차주 <span class="wb-col-range">${weekRangeShort(nextDate)}</span></div>
+          <div class="wb-col-body">${txtNext ? esc(txtNext) : `<span class="wb-empty">미작성</span>`}</div>
+        </div>
+      </div>`;
       const tripTags = trips.length ? `<div class="wb-trips">${trips.map(t => `<span class="wb-trip" style="background:${tripColor(t.type)};color:${tripTextColor(t.type)};font-weight:700;">${esc(fmtTripRange(t))} ${esc(t.place||"")}</span>`).join("")}</div>` : "";
       return `<div class="wb-card">
         <div class="wb-head">
@@ -3931,7 +4023,7 @@
           </div>
           ${status}
         </div>
-        ${body}
+        ${dualBody}
         ${tripTags}
       </div>`;
     }).join("");
