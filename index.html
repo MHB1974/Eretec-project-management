@@ -761,12 +761,13 @@
   .dday.soon { color: #f5b942; }
   .dday.far  { color: var(--text-dim); }
   .empty { text-align: center; color: var(--text-mute); font-size: 13px; padding: 28px 0; }
-  .notice-row { display: block; padding: 12px 0; border-top: 1px solid var(--line); }
+  .notice-row { display: block; padding: 10px 0; border-top: 1px solid var(--line); }
   .notice-row:first-of-type { border-top: none; }
-  .notice-row .nt { font-size: 13.5px; font-weight: 500; display: flex; align-items: center; gap: 8px; }
+  .notice-row .nt { font-size: 13.5px; font-weight: 600; display: flex; align-items: center; gap: 8px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .notice-row .nt-title-text { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .notice-row .new { width: 6px; height: 6px; border-radius: 50%; background: var(--accent); flex-shrink: 0; }
-  .notice-row .nt-preview { font-size: 12.5px; color: var(--text-dim); margin-top: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .notice-row .nd { font-size: 11.5px; color: var(--text-mute); margin-top: 4px; }
+  .notice-row .nt-preview { font-size: 12.5px; color: var(--text-dim); margin-top: 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .notice-row .nd { font-size: 11px; color: var(--text-mute); margin-top: 3px; }
   .full { grid-column: 1 / -1; }
   .loading { color: var(--text-mute); font-size: 13px; padding: 20px 0; text-align: center; }
 
@@ -2043,7 +2044,7 @@
 
     renderStats(projects);
     renderProjects(projects);
-    renderNotices(notices);
+    renderNotices((notices || []).slice(0, 4));
     renderWeekly(myWeeklyFinal);
     renderMembers(approvedMembers());
     renderPendingApprovals();
@@ -2805,7 +2806,7 @@
       const isNew = created && (now - created < 3*86400000);
       const preview = (nt.body || "").replace(/\s+/g, " ").trim();
       return `<div class="notice-row">
-        <div class="nt">${isNew ? '<span class="new"></span>' : ''}${esc(nt.title || "(제목 없음)")}</div>
+        <div class="nt">${isNew ? '<span class="new"></span>' : ''}<span class="nt-title-text">${esc(nt.title || "(제목 없음)")}</span></div>
         ${preview ? `<div class="nt-preview">${esc(preview)}</div>` : ""}
         <div class="nd">${fmtDate(nt.createdAt)}</div>
       </div>`;
