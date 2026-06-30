@@ -4438,9 +4438,11 @@
       box.innerHTML = `<div class="empty">등록된 프로젝트가 없습니다.${CURRENT_ROLE==='admin' ? ' ‘+ 프로젝트 생성’으로 등록하세요.' : ''}</div>`;
       return;
     }
-    box.innerHTML = WORK_PROJECTS.map(p => projectBlock(p)).join("");
+    // 프로젝트 현황과 동일한 순서: 지연 → 진행중 → 대기 → 완료
+    const ordered = sortProjectsByStatus(WORK_PROJECTS);
+    box.innerHTML = ordered.map(p => projectBlock(p)).join("");
     // 이벤트 바인딩
-    WORK_PROJECTS.forEach(p => bindProjectBlock(p));
+    ordered.forEach(p => bindProjectBlock(p));
   }
 
   function projectBlock(p) {
