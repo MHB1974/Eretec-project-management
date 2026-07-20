@@ -199,8 +199,8 @@
 
   /* 대시보드 셸: 사이드바 + 본문 */
   .dash { padding: 0; }
-  .shell { display: grid; grid-template-columns: 302px 1fr; min-height: 100vh; min-height: 100dvh; }
-  .side { background: var(--deep-2); border-right: 1px solid var(--line); padding: 26px 18px; display: flex; flex-direction: column; }
+  .shell { display: grid; grid-template-columns: 302px 1fr; height: 100vh; height: 100dvh; overflow: hidden; }
+  .side { background: var(--deep-2); border-right: 1px solid var(--line); padding: 26px 18px; display: flex; flex-direction: column; overflow-y: auto; }
   .side-brand { display: flex; flex-direction: column; align-items: center; gap: 10px; padding: 0 8px 24px; border-bottom: 1px solid var(--line); text-align: center; }
   .side-brand .logo-glyph { width: 50px; height: 33px; border-radius: 4px; }
   .side-brand .logo-glyph::before { width: 13px; height: 13px; }
@@ -289,6 +289,7 @@
   .cal-date { font-size: 13px; font-weight: 600; margin-bottom: 5px; }
   .cal-cell.sun .cal-date { color: #ff8a8a; }
   .cal-cell.sat .cal-date { color: #7fb6e8; }
+  .cal-holiday { font-size: 10px; font-weight: 600; color: #ff8a8a; margin: -2px 0 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; line-height: 1.2; }
   .cal-events { display: flex; flex-direction: column; gap: 3px; }
   .cal-ev { font-size: 10.5px; padding: 2px 5px; border-radius: 5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .cal-ev.due { background: rgba(255,122,122,0.16); color: #ff9a9a; }
@@ -657,6 +658,10 @@
   .tm-clickable:hover { background: var(--panel); }
   .tm-expand-ic { color: var(--text-mute); font-size: 11px; margin-left: 4px; }
   .tm-week-grid, .tm-trip-grid, .tm-proj-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 10px; }
+  /* 주간업무 카드 내 첫 줄 + 펼치기 */
+  .tm-wk-firstline { font-size: 13px; line-height: 1.6; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 6px; }
+  .tm-wk-more { margin-top: 8px; background: transparent; border: none; color: var(--text-mute); font-size: 11.5px; font-family: var(--font-body); cursor: pointer; padding: 2px 0; }
+  .tm-wk-more:hover { color: var(--accent); }
   .tm-wk-card { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; }
   .tm-wk-week { font-size: 11px; font-weight: 700; color: var(--accent); margin-bottom: 7px; }
   .tm-wk-card .wk-text { font-size: 13px; }
@@ -696,7 +701,7 @@
     .wk-add input { flex-basis: 100%; }
   }
   .side-foot { margin-top: auto; }
-  .member-list { margin-top: 18px; padding-top: 16px; border-top: 1px solid var(--line); overflow-y: auto; flex: 1; min-height: 0; }
+  .member-list { margin-top: 18px; padding-top: 16px; border-top: 1px solid var(--line); }
   .ml-head { display: flex; align-items: center; justify-content: space-between; padding: 0 10px 10px; font-size: 11px; letter-spacing: 0.1em; color: var(--text-mute); text-transform: uppercase; }
   .ml-count { background: var(--panel); color: var(--text-dim); border-radius: 20px; padding: 1px 8px; font-size: 11px; letter-spacing: 0; }
   .ml-item { display: flex; align-items: center; gap: 10px; padding: 8px 10px; border-radius: 8px; }
@@ -723,7 +728,7 @@
   .side-user .lo:hover { color: var(--danger); }
   .side-user .lo svg { width: 16px; height: 16px; }
 
-  .main { padding: 30px 38px; max-width: 1100px; }
+  .main { padding: 30px 38px; max-width: 1100px; height: 100vh; height: 100dvh; overflow-y: auto; }
   .main-head { display: flex; align-items: flex-end; justify-content: space-between; margin-bottom: 26px; }
   .main-head h1 { font-family: var(--font-display); font-weight: 500; font-size: 24px; letter-spacing: -0.01em; }
   .main-head .date { font-size: 13px; color: var(--text-dim); }
@@ -822,7 +827,8 @@
     .stage { grid-template-columns: 1fr; }
     .visual { padding: 36px 28px; gap: 36px; min-height: auto; }
     .auth { border-left: none; border-top: 1px solid var(--line); }
-    .shell { grid-template-columns: 1fr; }
+    .shell { grid-template-columns: 1fr; height: auto; min-height: 100vh; min-height: 100dvh; overflow: visible; }
+    .main { padding: 18px 16px 40px; height: auto; overflow-y: visible; }
     /* 모바일 상단바 노출 */
     .mtop { display: flex; }
     .dash { padding: 0; }
@@ -2271,6 +2277,7 @@
 
   /* ═════════ 팀원 (관리 화면) ═════════ */
   const tmExpanded = new Set();   // 펼친 팀원 카드
+  const tmWeekExpanded = new Set();   // 펼친 주간업무 (uid|week 키)
 
   async function openMembersView() {
     $("tmCount").textContent = `총 ${(ALL_MEMBERS||[]).length}명`;
@@ -2333,9 +2340,21 @@
       const weeklyAllHtml = (() => {
         const valid = (myWeekly||[]).filter(w => weeklyText(w).trim());
         if (!valid.length) return `<div class="md-empty">작성한 주간업무가 없습니다.</div>`;
-        return `<div class="tm-week-grid">` + valid.slice().sort((a,b)=> (b.week||"").localeCompare(a.week||"")).map(w => {
+        const sorted = valid.slice().sort((a,b)=> (b.week||"").localeCompare(a.week||""));
+        return `<div class="tm-week-grid">` + sorted.map(w => {
           const txt = weeklyText(w).trim();
-          return `<div class="tm-wk-card"><div class="tm-wk-week">${esc(weekRangeLabel(w.week))}</div><div class="wk-text">${esc(txt)}</div></div>`;
+          const lines = txt.split(/\r?\n/).filter(l => l.trim());
+          const firstLine = lines[0] || "";
+          const hasMore = lines.length > 1;
+          const key = `${uid}|${w.week}`;
+          const wkOpen = tmWeekExpanded.has(key);
+          return `<div class="tm-wk-card">
+            <div class="tm-wk-week">${esc(weekRangeLabel(w.week))}</div>
+            ${wkOpen
+              ? `<div class="wk-text">${esc(txt)}</div>`
+              : `<div class="tm-wk-firstline">${esc(firstLine)}</div>`}
+            ${hasMore ? `<button class="tm-wk-more" data-wk-toggle="${esc(key)}">${wkOpen ? '접기 ▲' : '펼치기 ▼'}</button>` : ""}
+          </div>`;
         }).join("") + `</div>`;
       })();
       const tripsHtml = myTrips.length
@@ -2396,6 +2415,13 @@
     box.querySelectorAll("[data-tmtoggle]").forEach(b => b.addEventListener("click", () => {
       const uid = b.dataset.tmtoggle;
       if (tmExpanded.has(uid)) tmExpanded.delete(uid); else tmExpanded.add(uid);
+      renderMembersView(allWeekly, allTrips);
+    }));
+    // 주간업무 첫 줄 클릭 → 해당 주 펼치기/접기
+    box.querySelectorAll("[data-wk-toggle]").forEach(b => b.addEventListener("click", (e) => {
+      e.stopPropagation();
+      const key = b.dataset.wkToggle;
+      if (tmWeekExpanded.has(key)) tmWeekExpanded.delete(key); else tmWeekExpanded.add(key);
       renderMembersView(allWeekly, allTrips);
     }));
     if (isAdmin) {
@@ -3087,6 +3113,31 @@
     }
   }
 
+  // 2026년 대한민국 공휴일 (대체공휴일 포함) — 키 형식은 ymd()와 동일 (0패딩 없음: YYYY-M-D)
+  const HOLIDAYS_KR = {
+    "2026-1-1": "신정",
+    "2026-2-16": "설날 연휴",
+    "2026-2-17": "설날",
+    "2026-2-18": "설날 연휴",
+    "2026-3-1": "삼일절",
+    "2026-3-2": "대체공휴일",
+    "2026-5-5": "어린이날",
+    "2026-5-24": "부처님오신날",
+    "2026-5-25": "대체공휴일",
+    "2026-6-6": "현충일",
+    "2026-7-17": "제헌절",
+    "2026-8-15": "광복절",
+    "2026-8-17": "대체공휴일",
+    "2026-9-24": "추석 연휴",
+    "2026-9-25": "추석",
+    "2026-9-26": "추석 연휴",
+    "2026-10-3": "개천절",
+    "2026-10-5": "대체공휴일",
+    "2026-10-9": "한글날",
+    "2026-12-25": "성탄절",
+  };
+  function holidayName(dt) { return HOLIDAYS_KR[ymd(dt)] || null; }
+
   function renderCalendar() {
     const now = new Date();
     if (calYear == null) { calYear = now.getFullYear(); calMonth = now.getMonth(); }
@@ -3106,6 +3157,7 @@
       const evs = events[k] || [];
       const isToday = sameDay(dt, now);
       const isSel = calSelected && sameDay(dt, calSelected);
+      const holiday = holidayName(dt);
       const evHtml = evs.slice(0, 3).map(e => {
         let style = "";
         if (e.solid && e.color) style = ` style="background:${e.color};color:${e.textColor||'#1a1200'};font-weight:700;"`;
@@ -3113,8 +3165,9 @@
         return `<div class="cal-ev ${e.type}"${style}>${esc(e.label)}</div>`;
       }).join("");
       const more = evs.length > 3 ? `<div class="cal-more">+${evs.length - 3}건</div>` : "";
-      const cls = ["cal-cell", dow === 0 ? "sun" : "", dow === 6 ? "sat" : "", isToday ? "today" : "", isSel ? "selected" : ""].filter(Boolean).join(" ");
-      cells.push(`<div class="${cls}" data-day="${d}"><div class="cal-date">${d}</div><div class="cal-events">${evHtml}${more}</div></div>`);
+      const cls = ["cal-cell", (dow === 0 || holiday) ? "sun" : "", dow === 6 ? "sat" : "", isToday ? "today" : "", isSel ? "selected" : ""].filter(Boolean).join(" ");
+      const holidayHtml = holiday ? `<div class="cal-holiday">${esc(holiday)}</div>` : "";
+      cells.push(`<div class="${cls}" data-day="${d}"><div class="cal-date">${d}</div>${holidayHtml}<div class="cal-events">${evHtml}${more}</div></div>`);
     }
     $("calGrid").innerHTML = cells.join("");
     $("calGrid").querySelectorAll("[data-day]").forEach(cell => {
@@ -3128,7 +3181,8 @@
     const k = ymd(calSelected);
     const evs = events[k] || [];
     const wd = ["일","월","화","수","목","금","토"][calSelected.getDay()];
-    $("calDetailTitle").textContent = `${calMonth + 1}월 ${day}일 (${wd})`;
+    const hol = holidayName(calSelected);
+    $("calDetailTitle").innerHTML = `${calMonth + 1}월 ${day}일 (${wd})` + (hol ? ` <span style="color:#ff8a8a;font-size:13px;font-weight:600;">· ${esc(hol)}</span>` : "");
     const body = $("calDetailBody");
     if (evs.length === 0) {
       body.innerHTML = `<div class="empty">이 날짜에 일정이 없습니다.</div>`;
