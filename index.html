@@ -3786,7 +3786,8 @@
       return;
     }
     if (planCard) planCard.style.display = "";
-    if ($("tripSaveRow")) $("tripSaveRow").style.display = "none"; // 팀원은 주간업무 저장 버튼으로 일괄 저장
+    // 본인(팀원) 화면에서도 출장 카드 자체에 저장 버튼을 보여줌 (주간업무 저장 버튼과 별개로 바로 저장 가능)
+    if ($("tripSaveRow")) $("tripSaveRow").style.display = own ? "" : "none";
 
     if (own) {
       // 본인(팀원): 금주/차주 인라인 편집
@@ -3844,7 +3845,7 @@
     }
   }
 
-  // 출장 전용 저장 (관리자 본인 — 주간업무 없이 출장/외근/연차만)
+  // 출장 전용 저장 (관리자 본인, 또는 팀원이 출장만 바로 저장하고 싶을 때)
   $("tripSaveBtn")?.addEventListener("click", async () => {
     if (!isOwnWeek()) return;
     const btn = $("tripSaveBtn");
