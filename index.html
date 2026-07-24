@@ -358,9 +358,9 @@
   .trip-date { font-size: 12px; font-weight: 700; color: #fff; background: #3a4a63; padding: 5px 10px; border-radius: 8px; flex-shrink: 0; min-width: 96px; text-align: center; }
   .trip-type { font-size: 11px; font-weight: 700; color: #fff; padding: 3px 9px; border-radius: 8px; flex-shrink: 0; }
   .trip-place { font-size: 14px; flex: 1; }
-  .trip-del { background: transparent; border: none; color: var(--text-mute); cursor: pointer; padding: 3px; border-radius: 6px; flex-shrink: 0; }
-  .trip-del:hover { color: var(--danger); background: rgba(255,122,122,0.1); }
-  .trip-del svg { width: 15px; height: 15px; display: block; }
+  .trip-edit-txt, .trip-del-txt { background: transparent; border: 1px solid var(--line); color: var(--text-mute); cursor: pointer; padding: 4px 10px; border-radius: 7px; flex-shrink: 0; font-size: 11.5px; font-weight: 600; font-family: var(--font-body); }
+  .trip-edit-txt:hover { color: var(--accent); border-color: var(--accent); background: rgba(87,224,154,0.08); }
+  .trip-del-txt:hover { color: var(--danger); border-color: var(--danger); background: rgba(255,122,122,0.08); }
   /* 인라인 추가 행 */
   .trip-add-row { display: flex; align-items: center; gap: 8px; padding: 14px 0 4px; border-top: 1px solid var(--line); margin-top: 8px; flex-wrap: wrap; }
   .trip-inline-input { padding: 8px 10px; background: var(--deep-2); border: 1px solid var(--line); border-radius: 8px; color: var(--text); font-family: var(--font-body); font-size: 13px; }
@@ -369,8 +369,25 @@
   .trip-add-tilde { color: var(--text-mute); font-size: 13px; }
   .trip-add-btn { padding: 8px 14px; background: var(--accent); color: #06231a; border: none; border-radius: 8px; font-weight: 700; font-size: 13px; cursor: pointer; font-family: var(--font-body); }
   .trip-add-btn:hover { filter: brightness(1.05); }
+  .trip-add-btn.editing { background: #f5a623; }
   .trip-row.pending { background: rgba(74, 222, 128, 0.06); border-radius: 8px; padding-left: 8px; padding-right: 8px; }
   .trip-row.pending-del { opacity: 0.45; text-decoration: line-through; }
+  .trip-row.editing { background: rgba(245, 166, 35, 0.1); border-radius: 8px; padding-left: 8px; padding-right: 8px; }
+  .trip-editing-tag { font-size: 11px; font-weight: 700; color: #f5a623; flex-shrink: 0; }
+  .trip-edit-cancel { background: transparent; border: 1px solid #f5a623; color: #f5a623; font-size: 11px; font-weight: 700; padding: 4px 10px; border-radius: 7px; cursor: pointer; font-family: var(--font-body); flex-shrink: 0; }
+  .trip-edit-cancel:hover { background: rgba(245, 166, 35, 0.15); }
+  /* 출장 변경 히스토리 */
+  .trip-history-toggle { margin-top: 10px; text-align: center; }
+  .trip-history-toggle button { background: transparent; border: none; color: var(--text-mute); font-size: 12px; cursor: pointer; font-family: var(--font-body); padding: 4px 8px; }
+  .trip-history-toggle button:hover { color: var(--accent); }
+  .trip-history-list { margin-top: 8px; display: flex; flex-direction: column; gap: 6px; max-height: 220px; overflow-y: auto; padding: 10px 12px; background: var(--panel); border-radius: 9px; }
+  .trip-hist-row { font-size: 12px; line-height: 1.6; color: var(--text-dim); display: flex; gap: 8px; align-items: baseline; }
+  .trip-hist-tag { flex-shrink: 0; font-size: 10.5px; font-weight: 700; padding: 1px 7px; border-radius: 6px; }
+  .trip-hist-tag.add { background: rgba(87,224,154,0.15); color: var(--accent); }
+  .trip-hist-tag.edit { background: rgba(245,166,35,0.15); color: #f5a623; }
+  .trip-hist-tag.delete { background: rgba(255,122,122,0.15); color: var(--danger); }
+  .trip-hist-body { flex: 1; }
+  .trip-hist-time { flex-shrink: 0; font-size: 10.5px; color: var(--text-mute); }
 
   /* 주간업무 현황 보드 */
   #wbList { display: grid; grid-template-columns: 1fr; gap: 12px; }
@@ -1204,6 +1221,10 @@
           <span class="wk-hint" id="tripSaveHint">저장하면 캘린더에 바로 반영됩니다.</span>
           <button class="wk-save-btn" id="tripSaveBtn">저장</button>
         </div>
+        <div class="trip-history-toggle" id="tripHistoryToggle" style="display:none;">
+          <button type="button" id="tripHistoryBtn">변경 내역 보기 ▾</button>
+        </div>
+        <div class="trip-history-list" id="tripHistoryList" style="display:none;"></div>
       </section>
     </main>
 
@@ -2162,6 +2183,7 @@
   let DEMO_MODE = false;
   let DEMO_WEEKLY = {};
   let DEMO_TRIPS = {};
+  let DEMO_TRIP_HISTORY = {};   // 데모용 출장 변경 히스토리 {uid: [{action,before,after,at}]}
   let DEMO_MAIL_RECIPIENTS = [];
 
   // 영업·현장 고정 명단 (설계팀 외부 인원 — 이름 텍스트로 저장/표시)
@@ -3217,7 +3239,7 @@
     if (scope === "mine" && MY_TRIPS_CACHE === null) {
       await loadMyTrips();
     }
-    if (scope === "team" && TEAM_WEEKLY_CACHE === null) {
+    if (scope === "team" && (TEAM_WEEKLY_CACHE === null || TEAM_TRIPS_CACHE === null)) {
       await loadTeamWeekly();
     }
     renderCalendar();
@@ -3929,6 +3951,7 @@
   let tripOwn = true;
   // 변경 큐 (저장 버튼 누르기 전까지 보관)
   let TRIP_PENDING_ADDS = [];      // 새로 추가될 일정 {tempId, type, start, end, place}
+  let TRIP_EDITING = null;         // 현재 폼에서 수정 중인 항목 정보 {kind:"p"|"s", id}
   let TRIP_PENDING_DELS = new Set(); // 삭제 예정 id
 
   function fmtTripRange(t) {
@@ -3937,6 +3960,11 @@
     if (!s) return "";
     const f = (d) => `${d.getMonth()+1}/${d.getDate()}`;
     return e && !sameDay(s, e) ? `${f(s)}~${f(e)}` : f(s);
+  }
+  // 일정 요약 텍스트 (히스토리 표시용): "출장 7/21 KAI 사천 방문"
+  function tripSummary(t) {
+    if (!t) return "";
+    return `${t.type || "출장"} ${fmtTripRange(t)}${t.place ? " " + t.place : ""}`;
   }
 
   // 두 날짜 구간이 겹치는지
@@ -3966,6 +3994,7 @@
     if (_lastTripUid !== uid) {
       TRIP_PENDING_ADDS = [];
       TRIP_PENDING_DELS = new Set();
+      TRIP_EDITING = null;
       _lastTripUid = uid;
     }
     $("tripAddRow").style.display = own ? "" : "none";
@@ -3981,11 +4010,59 @@
     });
     drawTrips();
     updateSaveHint();
+    TRIP_HISTORY_CACHE = null;
+    $("tripHistoryList").style.display = "none";
+    $("tripHistoryList").innerHTML = "";
+    $("tripHistoryBtn").textContent = "변경 내역 보기 ▾";
+    $("tripHistoryToggle").style.display = own ? "" : "none";
   }
+
+  let TRIP_HISTORY_CACHE = null;
+  async function loadTripHistory(uid) {
+    if (DEMO_MODE) return (DEMO_TRIP_HISTORY[uid] || []).slice();
+    if (configMissing()) return [];
+    const list = await safeGetDocs(query(collection(db, "trip_history"), where("uid", "==", uid), orderBy("at", "desc"), limit(30)));
+    return list || [];
+  }
+  function renderTripHistory(list) {
+    const box = $("tripHistoryList");
+    if (!list.length) { box.innerHTML = `<div class="empty" style="padding:0;">변경 내역이 없습니다.</div>`; return; }
+    const tagText = { add: "추가", edit: "수정", delete: "삭제" };
+    box.innerHTML = list.map(h => {
+      const at = h.at?.toDate ? h.at.toDate() : (h.at instanceof Date ? h.at : null);
+      const timeStr = at ? `${at.getMonth()+1}/${at.getDate()} ${String(at.getHours()).padStart(2,'0')}:${String(at.getMinutes()).padStart(2,'0')}` : "";
+      let body = "";
+      if (h.action === "edit") body = `${esc(h.before || "")} → ${esc(h.after || "")}`;
+      else if (h.action === "delete") body = esc(h.before || "");
+      else body = esc(h.after || "");
+      return `<div class="trip-hist-row">
+        <span class="trip-hist-tag ${h.action}">${tagText[h.action] || h.action}</span>
+        <span class="trip-hist-body">${body}</span>
+        <span class="trip-hist-time">${timeStr}</span>
+      </div>`;
+    }).join("");
+  }
+  $("tripHistoryBtn")?.addEventListener("click", async () => {
+    const listEl = $("tripHistoryList");
+    const btn = $("tripHistoryBtn");
+    const opening = listEl.style.display === "none";
+    if (opening) {
+      if (TRIP_HISTORY_CACHE === null) {
+        btn.textContent = "불러오는 중…";
+        TRIP_HISTORY_CACHE = await loadTripHistory(CURRENT_USER?.uid);
+      }
+      renderTripHistory(TRIP_HISTORY_CACHE);
+      listEl.style.display = "";
+      btn.textContent = "변경 내역 숨기기 ▴";
+    } else {
+      listEl.style.display = "none";
+      btn.textContent = "변경 내역 보기 ▾";
+    }
+  });
 
   function drawTrips() {
     const box = $("tripList");
-    const [wkStart, wkEnd] = currentWeekRange();
+    setTripEditMode(!!TRIP_EDITING);   // 저장 등으로 편집 상태가 바뀌었으면 버튼 텍스트 동기화
     // 날짜 입력에 제약(min/max)을 두지 않음 — 자유롭게 선택 가능
     if ($("tripAddStart")) {
       $("tripAddStart").removeAttribute("min");
@@ -3993,31 +4070,34 @@
       $("tripAddEnd").removeAttribute("min");
       $("tripAddEnd").removeAttribute("max");
     }
-    // 이번 주에 걸치는 일정만 필터
-    const visible = TRIPS_CACHE.filter(t => {
-      const s = toDateObj(t.start), e = t.end ? toDateObj(t.end) : s;
-      return rangesOverlap(s, e, wkStart, wkEnd);
-    });
-    // 추가 예정도 이번 주에 걸치는 것만
-    const visiblePending = TRIP_PENDING_ADDS.filter(t => {
-      const s = toDateObj(t.start), e = t.end ? toDateObj(t.end) : s;
-      return rangesOverlap(s, e, wkStart, wkEnd);
-    });
+    // 저장된 전체 출장/외근/연차 (주 제한 없이 항상 표시 — 최신순)
+    const visible = TRIPS_CACHE.slice().sort((a,b) => (toDateObj(b.start)?.getTime()||0) - (toDateObj(a.start)?.getTime()||0));
+    // 추가 예정은 항상 표시 (주가 달라도 방금 입력한 내용을 바로 확인할 수 있어야 함)
+    const visiblePending = TRIP_PENDING_ADDS.slice();
     if (!visible.length && !visiblePending.length) {
-      box.innerHTML = `<div class="empty">이번 주에 등록된 출장/외근/연차가 없습니다.${tripOwn ? " 아래에서 추가하세요." : ""}</div>`;
+      box.innerHTML = `<div class="empty">등록된 출장/외근/연차가 없습니다.${tripOwn ? " 아래에서 추가하세요." : ""}</div>`;
       return;
     }
     const rowHtml = (t, isPending) => {
       const type = t.type || "출장";
       const id = isPending ? t.tempId : t.id;
       const isDel = !isPending && TRIP_PENDING_DELS.has(id);
-      const cls = "trip-row" + (isPending ? " pending" : "") + (isDel ? " pending-del" : "");
-      const delBtn = tripOwn ? `<button class="trip-del" data-trip-action="${isPending ? "remove-pending" : (isDel ? "undo-del" : "mark-del")}" data-trip-id="${esc(id)}" title="${isDel ? "삭제 취소" : "삭제"}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" stroke-linecap="round" stroke-linejoin="round"/></svg></button>` : "";
+      const isEditing = TRIP_EDITING && TRIP_EDITING.kind === (isPending ? "p" : "s") && TRIP_EDITING.id === id;
+      const cls = "trip-row" + (isPending ? " pending" : "") + (isDel ? " pending-del" : "") + (isEditing ? " editing" : "");
+      let actionBtns;
+      if (isEditing) {
+        actionBtns = `<button class="trip-edit-cancel" data-trip-cancel-edit="1" title="수정 취소">취소</button>`;
+      } else {
+        const editBtn = (tripOwn && !isDel) ? `<button class="trip-edit-txt" data-trip-edit="${isPending ? "p:" : "s:"}${esc(id)}">수정</button>` : "";
+        const delBtn = tripOwn ? `<button class="trip-del-txt" data-trip-action="${isPending ? "remove-pending" : (isDel ? "undo-del" : "mark-del")}" data-trip-id="${esc(id)}">${isDel ? "취소" : "삭제"}</button>` : "";
+        actionBtns = editBtn + delBtn;
+      }
       return `<div class="${cls}">
         <span class="trip-date">${esc(fmtTripRange(t))}</span>
         <span class="trip-type" style="background:${tripColor(type)};color:${tripTextColor(type)};font-weight:700;">${esc(type)}</span>
         <span class="trip-place">${esc(t.place || "")}</span>
-        ${delBtn}
+        ${isEditing ? '<span class="trip-editing-tag">수정 중…</span>' : ''}
+        ${actionBtns}
       </div>`;
     };
     box.innerHTML = visible.map(t => rowHtml(t, false)).join("") +
@@ -4038,7 +4118,47 @@
           updateSaveHint();
         });
       });
+      // 수정 버튼: 값을 입력 폼에 채우고, 해당 항목은 편집 모드로(저장분은 삭제 예약 + pending 항목은 목록에서 제거)
+      box.querySelectorAll("[data-trip-edit]").forEach(b => {
+        b.addEventListener("click", () => {
+          const [kind, id] = b.dataset.tripEdit.split(":");
+          let target;
+          if (kind === "p") {
+            target = TRIP_PENDING_ADDS.find(t => t.tempId === id);
+            if (!target) return;
+          } else {
+            target = TRIPS_CACHE.find(t => t.id === id);
+            if (!target) return;
+          }
+          TRIP_EDITING = { kind, id };   // 수정 모드 진입 (저장 대기 목록은 아직 안 건드림 — 취소 가능하게)
+          const fmt = (d) => { const dt = toDateObj(d); if (!dt) return ""; return `${dt.getFullYear()}-${String(dt.getMonth()+1).padStart(2,'0')}-${String(dt.getDate()).padStart(2,'0')}`; };
+          $("tripAddType").value = target.type || "출장";
+          $("tripAddStart").value = fmt(target.start);
+          $("tripAddEnd").value = target.end ? fmt(target.end) : "";
+          $("tripAddPlace").value = target.place || "";
+          setTripEditMode(true);
+          drawTrips();
+          $("tripAddPlace").focus();
+        });
+      });
+      // 수정 중인 항목의 "수정 취소" 버튼
+      box.querySelectorAll("[data-trip-cancel-edit]").forEach(b => {
+        b.addEventListener("click", () => {
+          TRIP_EDITING = null;
+          setTripEditMode(false);
+          $("tripAddType").value = "출장"; $("tripAddStart").value = ""; $("tripAddEnd").value = ""; $("tripAddPlace").value = "";
+          drawTrips();
+        });
+      });
     }
+  }
+
+  // 출장 추가 폼을 "추가 모드" ↔ "수정 모드"로 전환
+  function setTripEditMode(editing) {
+    const btn = $("tripAddRowBtn");
+    if (!btn) return;
+    btn.textContent = editing ? "수정 완료" : "＋ 추가";
+    btn.classList.toggle("editing", !!editing);
   }
 
   // 인라인 추가 버튼
@@ -4051,10 +4171,27 @@
     if (!start) { alert("시작일을 선택하세요."); return; }
     if (!place) { alert("목적지/내용을 입력하세요."); return; }
     if (end && end < start) { alert("종료일이 시작일보다 빠릅니다."); return; }
-    TRIP_PENDING_ADDS.push({
-      tempId: "tmp_" + Date.now() + "_" + Math.random().toString(36).slice(2,7),
-      type, start: new Date(start), end: end ? new Date(end) : null, place
-    });
+    const newVal = { type, start: new Date(start), end: end ? new Date(end) : null, place };
+
+    if (TRIP_EDITING) {
+      // 수정 완료: 편집 대상을 새 값으로 교체
+      let before = null;
+      if (TRIP_EDITING.kind === "p") {
+        const idx = TRIP_PENDING_ADDS.findIndex(t => t.tempId === TRIP_EDITING.id);
+        if (idx !== -1) { before = TRIP_PENDING_ADDS[idx]; TRIP_PENDING_ADDS[idx] = { tempId: TRIP_EDITING.id, ...newVal }; }
+      } else {
+        before = TRIPS_CACHE.find(t => t.id === TRIP_EDITING.id) || null;
+        TRIP_PENDING_DELS.add(TRIP_EDITING.id);   // 기존 저장분은 삭제 예약
+        TRIP_PENDING_ADDS.push({ tempId: "tmp_" + Date.now() + "_" + Math.random().toString(36).slice(2,7), ...newVal, editedFromId: TRIP_EDITING.id, editedFromSummary: before ? tripSummary(before) : null });
+      }
+      TRIP_EDITING = null;
+      setTripEditMode(false);
+    } else {
+      TRIP_PENDING_ADDS.push({
+        tempId: "tmp_" + Date.now() + "_" + Math.random().toString(36).slice(2,7),
+        ...newVal
+      });
+    }
     $("tripAddStart").value = ""; $("tripAddEnd").value = ""; $("tripAddPlace").value = "";
     drawTrips();
     updateSaveHint();
@@ -4086,20 +4223,40 @@
     if (!addsToSave.length && !delsToSave.length) return { ok: true };
 
     if (DEMO_MODE) {
+      const beforeMap = {};
+      (DEMO_TRIPS[uid] || []).forEach(t => { beforeMap[t.id] = t; });
       const cur = (DEMO_TRIPS[uid] || []).filter(t => !delsToSave.includes(t.id));
+      const editedIds = new Set(addsToSave.filter(t => t.editedFromId).map(t => t.editedFromId));
       addsToSave.forEach(t => cur.push({
         id: "trip_" + Date.now() + "_" + Math.random().toString(36).slice(2,5),
         uid, type: t.type, start: t.start, end: t.end, place: t.place
       }));
       DEMO_TRIPS[uid] = cur;
       TRIPS_CACHE = cur.slice();
-      TRIP_PENDING_ADDS = []; TRIP_PENDING_DELS = new Set();
+      // 히스토리 기록 (데모: 메모리 배열)
+      DEMO_TRIP_HISTORY[uid] = DEMO_TRIP_HISTORY[uid] || [];
+      addsToSave.forEach(t => {
+        if (t.editedFromId) {
+          DEMO_TRIP_HISTORY[uid].unshift({ action: "edit", before: t.editedFromSummary, after: tripSummary(t), at: new Date() });
+        } else {
+          DEMO_TRIP_HISTORY[uid].unshift({ action: "add", after: tripSummary(t), at: new Date() });
+        }
+      });
+      delsToSave.filter(id => !editedIds.has(id)).forEach(id => {
+        const before = beforeMap[id];
+        DEMO_TRIP_HISTORY[uid].unshift({ action: "delete", before: before ? tripSummary(before) : "(삭제된 일정)", at: new Date() });
+      });
+      TRIP_PENDING_ADDS = []; TRIP_PENDING_DELS = new Set(); TRIP_EDITING = null; TRIP_HISTORY_CACHE = null;
       MY_TRIPS_CACHE = null; TEAM_TRIPS_CACHE = null;
       return { ok: true };
     }
     if (configMissing()) return { ok: false, err: "Firebase 설정이 없습니다." };
 
     try {
+      const editedIds = new Set(addsToSave.filter(t => t.editedFromId).map(t => t.editedFromId));
+      const beforeMap = {};
+      TRIPS_CACHE.forEach(t => { beforeMap[t.id] = t; });
+      const historyEntries = [];
       // 추가 작업
       for (const t of addsToSave) {
         await addDoc(collection(db, "trips"), {
@@ -4109,12 +4266,31 @@
           end: t.end ? Timestamp.fromDate(t.end) : null,
           createdAt: serverTimestamp(),
         });
+        if (t.editedFromId) {
+          historyEntries.push({ action: "edit", before: t.editedFromSummary || "", after: tripSummary(t) });
+        } else {
+          historyEntries.push({ action: "add", before: "", after: tripSummary(t) });
+        }
       }
       // 삭제 작업
       for (const id of delsToSave) {
         await deleteDoc(doc(db, "trips", id));
+        if (!editedIds.has(id)) {
+          const before = beforeMap[id];
+          historyEntries.push({ action: "delete", before: before ? tripSummary(before) : "(삭제된 일정)", after: "" });
+        }
       }
-      TRIP_PENDING_ADDS = []; TRIP_PENDING_DELS = new Set();
+      // 히스토리 저장 (실패해도 본 저장에는 영향 없게 개별 처리)
+      for (const h of historyEntries) {
+        try {
+          await addDoc(collection(db, "trip_history"), {
+            uid, name: CURRENT_USER?.displayName || "",
+            action: h.action, before: h.before, after: h.after,
+            at: serverTimestamp(),
+          });
+        } catch (e) { console.warn("히스토리 저장 실패:", e.message); }
+      }
+      TRIP_PENDING_ADDS = []; TRIP_PENDING_DELS = new Set(); TRIP_EDITING = null; TRIP_HISTORY_CACHE = null;
       MY_TRIPS_CACHE = null; TEAM_TRIPS_CACHE = null;
       // 다시 로드
       const all = await safeGetDocs(query(collection(db, "trips"), where("uid", "==", uid)));
