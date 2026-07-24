@@ -399,6 +399,7 @@
   .wb-done { margin-left: auto; font-size: 11px; font-weight: 600; padding: 4px 10px; border-radius: 12px; background: rgba(87,224,154,0.14); color: var(--accent); }
   .wb-body { font-size: 13.5px; line-height: 1.75; color: var(--text-dim); white-space: pre-wrap; word-break: break-word; padding-left: 45px; }
   .wb-trips { padding-left: 45px; margin-top: 8px; display: flex; flex-wrap: wrap; gap: 6px; }
+  .wb-col .wb-trips { padding-left: 0; margin-top: 8px; }
   .wb-trip { font-size: 11px; font-weight: 700; color: #fff; padding: 3px 9px; border-radius: 10px; }
   .dot-trip { background: #ff9f43; }
 
@@ -4183,18 +4184,28 @@
         const mon = mondayOfWeek(wk); const sun = new Date(mon); sun.setDate(mon.getDate() + 6);
         return e >= mon && s <= sun;
       });
+      const tripsNext = (tripsByUid[uid] || []).filter(t => {
+        const s = toDateObj(t.start); if (!s) return false;
+        const e = t.end ? toDateObj(t.end) : s;
+        const mon = mondayOfWeek(nextWk); const sun = new Date(mon); sun.setDate(mon.getDate() + 6);
+        return e >= mon && s <= sun;
+      });
       const status = txt ? `<span class="wb-done">작성 완료</span>` : `<span class="wb-missing">미작성</span>`;
+      const tripTagsHtml = (list) => list.length
+        ? `<div class="wb-trips">${list.map(t => `<span class="wb-trip" style="background:${tripColor(t.type)};color:${tripTextColor(t.type)};font-weight:700;">${esc(fmtTripRange(t))} ${esc(t.place||"")}</span>`).join("")}</div>`
+        : "";
       const dualBody = `<div class="wb-dual">
         <div class="wb-col">
           <div class="wb-col-head wb-col-this">금주 <span class="wb-col-range">${weekRangeShort(wbDate)}</span></div>
           <div class="wb-col-body">${txt ? esc(txt) : `<span class="wb-empty">${isThisWeek ? "미작성" : "작성 내역 없음"}</span>`}</div>
+          ${tripTagsHtml(trips)}
         </div>
         <div class="wb-col">
           <div class="wb-col-head wb-col-next">차주 <span class="wb-col-range">${weekRangeShort(nextDate)}</span></div>
           <div class="wb-col-body">${txtNext ? esc(txtNext) : `<span class="wb-empty">미작성</span>`}</div>
+          ${tripTagsHtml(tripsNext)}
         </div>
       </div>`;
-      const tripTags = trips.length ? `<div class="wb-trips">${trips.map(t => `<span class="wb-trip" style="background:${tripColor(t.type)};color:${tripTextColor(t.type)};font-weight:700;">${esc(fmtTripRange(t))} ${esc(t.place||"")}</span>`).join("")}</div>` : "";
       return `<div class="wb-card">
         <div class="wb-head">
           <div class="wb-avatar" style="color:${memberColor(uid)}">${esc(nm.charAt(0))}</div>
@@ -4205,7 +4216,6 @@
           ${status}
         </div>
         ${dualBody}
-        ${tripTags}
       </div>`;
     }).join("");
   }
