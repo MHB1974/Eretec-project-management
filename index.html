@@ -3065,9 +3065,9 @@
 
   // 출장/외근/연차 종류별 아이콘·색상
   function tripIcon(type) { return ""; }   // 아이콘 미사용
-  function tripColor(type) { return type === "외근" ? "#1e3a8a" : type === "연차" ? "#4c1d95" : "#ff9f43"; }  // 출장=주황, 외근=남색, 연차=어두운 보라
+  function tripColor(type) { return type === "외근" ? "#3ea8ff" : type === "연차" ? "#ff6ec7" : "#ffb454"; }  // 출장=주황, 외근=밝은블루, 연차=핑크 (사람 구분 없이 유형별 고정색, 어두운 배경에서도 잘 보이도록)
   // 출장 배경색에 어울리는 글자색 (밝은 배경=어두운 글자, 어두운 배경=흰 글자)
-  function tripTextColor(type) { return type === "외근" || type === "연차" ? "#fff" : "#1a1200"; }
+  function tripTextColor(type) { return "#1a1200"; }  // 세 유형 모두 밝은 배경색이므로 어두운 글자로 통일
 
   // 날짜별 이벤트 수집
   function collectEvents() {
@@ -3125,7 +3125,7 @@
 
   // 범례 갱신
   function renderLegend() {
-    const base = `<span><i class="dot-due"></i> 프로젝트 납기</span><span><i class="dot-start"></i> 프로젝트 시작</span><span><i style="background:#ff9f43"></i> 출장</span><span><i style="background:#1e3a8a"></i> 외근</span><span><i style="background:#4c1d95"></i> 연차</span>`;
+    const base = `<span><i class="dot-due"></i> 프로젝트 납기</span><span><i class="dot-start"></i> 프로젝트 시작</span><span><i style="background:${tripColor("출장")}"></i> 출장</span><span><i style="background:${tripColor("외근")}"></i> 외근</span><span><i style="background:${tripColor("연차")}"></i> 연차</span>`;
     if (calScope === "team") {
       const seen = new Set();
       const uids = (TEAM_WEEKLY_CACHE || []).map(p => p.uid).filter(u => { if (!isActiveMember(u)) return false; if (seen.has(u)) return false; seen.add(u); return true; });
