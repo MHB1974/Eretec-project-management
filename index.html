@@ -4739,7 +4739,7 @@
       <button class="pj-save-btn" data-psave="${esc(p.id)}">저장</button>` : `<span></span>`;
 
     let headHtml;
-    if (isEditing && isAdmin) {
+    if (isEditing && editable) {
       // 인라인 편집 폼
       const memberOpts = (sel) => `<option value="">미지정</option>` + (ALL_MEMBERS||[]).slice()
         .sort((a,b)=>(RANK_ORDER[a.rank]||9)-(RANK_ORDER[b.rank]||9))
@@ -4881,6 +4881,7 @@
 
   async function saveInlineEdit(pid) {
     const p = ALL_PROJECTS.find(x => x.id === pid);
+    if (!p || !canEditProject(p)) return;
     const wp = workProj(pid);
     if (!p) return;
     const card = document.querySelector(`[data-pinsave="${cssEsc(pid)}"]`)?.closest(".pj-block");
