@@ -377,6 +377,8 @@
   .trip-edit-cancel { background: transparent; border: 1px solid #f5a623; color: #f5a623; font-size: 11px; font-weight: 700; padding: 4px 10px; border-radius: 7px; cursor: pointer; font-family: var(--font-body); flex-shrink: 0; }
   .trip-edit-cancel:hover { background: rgba(245, 166, 35, 0.15); }
   /* 출장 변경 히스토리 */
+  .trip-showall-btn { display: block; width: 100%; text-align: center; background: transparent; border: none; color: var(--text-mute); font-size: 12px; cursor: pointer; font-family: var(--font-body); padding: 10px 0 2px; }
+  .trip-showall-btn:hover { color: var(--accent); }
   .trip-history-toggle { margin-top: 10px; text-align: center; }
   .trip-history-toggle button { background: transparent; border: none; color: var(--text-mute); font-size: 12px; cursor: pointer; font-family: var(--font-body); padding: 4px 8px; }
   .trip-history-toggle button:hover { color: var(--accent); }
@@ -3952,6 +3954,7 @@
   // 변경 큐 (저장 버튼 누르기 전까지 보관)
   let TRIP_PENDING_ADDS = [];      // 새로 추가될 일정 {tempId, type, start, end, place}
   let TRIP_EDITING = null;         // 현재 폼에서 수정 중인 항목 정보 {kind:"p"|"s", id}
+  let TRIP_SHOW_ALL = false;       // false: 최근 2주만 표시, true: 전체 표시
   let TRIP_PENDING_DELS = new Set(); // 삭제 예정 id
 
   function fmtTripRange(t) {
@@ -3995,6 +3998,7 @@
       TRIP_PENDING_ADDS = [];
       TRIP_PENDING_DELS = new Set();
       TRIP_EDITING = null;
+      TRIP_SHOW_ALL = false;
       _lastTripUid = uid;
     }
     $("tripAddRow").style.display = own ? "" : "none";
@@ -4070,8 +4074,16 @@
       $("tripAddEnd").removeAttribute("min");
       $("tripAddEnd").removeAttribute("max");
     }
-    // 저장된 전체 출장/외근/연차 (주 제한 없이 항상 표시 — 최신순)
-    const visible = TRIPS_CACHE.slice().sort((a,b) => (toDateObj(b.start)?.getTime()||0) - (toDateObj(a.start)?.getTime()||0));
+    // 저장된 출장/외근/연차: 기본은 최근 2주(오늘 기준 지난주+이번주)만, 전체보기 토글 시 전체
+    const allSorted = TRIPS_CACHE.slice().sort((a,b) => (toDateObj(b.start)?.getTime()||0) - (toDateObj(a.start)?.getTime()||0));
+    const today = new Date(); today.setHours(0,0,0,0);
+    const twoWeeksAgo = new Date(today); twoWeeksAgo.setDate(today.getDate() - 13);
+    const recentOnly = allSorted.filter(t => {
+      const s = toDateObj(t.start), e = t.end ? toDateObj(t.end) : s;
+      return e >= twoWeeksAgo;   // 최근 2주 이후에 끝나는(=최근 2주에 걸치거나 그 이후) 일정
+    });
+    const visible = TRIP_SHOW_ALL ? allSorted : recentOnly;
+    const hiddenCount = allSorted.length - recentOnly.length;
     // 추가 예정은 항상 표시 (주가 달라도 방금 입력한 내용을 바로 확인할 수 있어야 함)
     const visiblePending = TRIP_PENDING_ADDS.slice();
     if (!visible.length && !visiblePending.length) {
@@ -4100,8 +4112,18 @@
         ${actionBtns}
       </div>`;
     };
+    const toggleHtml = (!TRIP_SHOW_ALL && hiddenCount > 0)
+      ? `<button class="trip-showall-btn" data-trip-showall="1">전체 보기 (지난 내역 ${hiddenCount}건 더 있음) ▾</button>`
+      : (TRIP_SHOW_ALL && allSorted.length > recentOnly.length)
+        ? `<button class="trip-showall-btn" data-trip-showall="0">최근 2주만 보기 ▴</button>`
+        : "";
     box.innerHTML = visible.map(t => rowHtml(t, false)).join("") +
-                    visiblePending.map(t => rowHtml(t, true)).join("");
+                    visiblePending.map(t => rowHtml(t, true)).join("") +
+                    toggleHtml;
+    box.querySelector("[data-trip-showall]")?.addEventListener("click", (e) => {
+      TRIP_SHOW_ALL = e.target.dataset.tripShowall === "1";
+      drawTrips();
+    });
     if (tripOwn) {
       box.querySelectorAll("[data-trip-action]").forEach(b => {
         b.addEventListener("click", () => {
