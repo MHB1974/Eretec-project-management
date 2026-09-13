@@ -281,7 +281,7 @@
   .cal-grid-head .sun { color: #ff8a8a; }
   .cal-grid-head .sat { color: #7fb6e8; }
   .cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; }
-  .cal-cell { min-height: 136px; background: var(--deep-2); border: 1px solid var(--line); border-radius: 10px; padding: 7px 8px; cursor: pointer; transition: border-color .15s; overflow: hidden; }
+  .cal-cell { min-height: 177px; background: var(--deep-2); border: 1px solid var(--line); border-radius: 10px; padding: 7px 8px; cursor: pointer; transition: border-color .15s; overflow: hidden; }
   .cal-cell:hover { border-color: var(--accent); }
   .cal-cell.empty { background: transparent; border-color: transparent; cursor: default; }
   .cal-cell.today { border-color: var(--accent); box-shadow: inset 0 0 0 1px var(--accent); }
@@ -870,7 +870,7 @@
     .main-head h1 { font-size: 22px; }
     .stat-row { grid-template-columns: repeat(2, 1fr); }
     .grid2 { grid-template-columns: 1fr; }
-    .cal-cell { min-height: 92px; padding: 4px 5px; }
+    .cal-cell { min-height: 120px; padding: 4px 5px; }
     .cal-date { font-size: 11px; }
     .cal-ev { font-size: 9px; padding: 1px 3px; }
     .cal-legend { flex-wrap: wrap; gap: 10px; }
@@ -3139,7 +3139,7 @@
     return m.status !== "rejected";             // 거부된 사용자도 제외
   }
 
-  const CAL_MAX_EV = 7;   // 날짜칸에 표시할 최대 일정 수
+  const CAL_MAX_EV = 9;   // 날짜칸에 표시할 최대 일정 수
   function toDateObj(d) {
     if (!d) return null;
     const dt = d.toDate ? d.toDate() : new Date(d);
