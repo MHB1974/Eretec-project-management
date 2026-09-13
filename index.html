@@ -881,6 +881,40 @@
     .pie-labels { display: none; }
   }
   @media (prefers-reduced-motion: reduce) { .logo-glyph::after { animation: none; } }
+
+  /* 임원보고 PPT 내보내기 */
+  .ppt-btn { font-size: 13px; font-weight: 700; color: #06241a; background: var(--accent);
+             border: none; border-radius: 9px; padding: 9px 16px; cursor: pointer; white-space: nowrap; }
+  .ppt-btn:hover { filter: brightness(1.08); }
+  .ppt-btn:active { transform: translateY(1px); }
+  #pptModal .modal { max-width: 620px; }
+  .ppt-opts { display: flex; flex-wrap: wrap; gap: 10px 18px; margin: 4px 0 16px; }
+  .ppt-opts label { display: flex; align-items: center; gap: 7px; font-size: 13px; color: var(--text-dim); cursor: pointer; }
+  .ppt-opts input { accent-color: var(--accent); width: 15px; height: 15px; }
+  .ppt-week-row { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; }
+  .ppt-week-row select { flex: 1; }
+  .ppt-week-info { font-size: 12px; color: var(--text-mute); white-space: nowrap; }
+  .ppt-preview { border: 1px solid var(--line); border-radius: 11px; background: var(--panel);
+                 padding: 14px; max-height: 320px; overflow-y: auto; }
+  .ppt-sum { font-size: 12px; color: var(--text-dim); margin-bottom: 12px; }
+  .ppt-sum b { color: var(--accent); }
+  .ppt-none { font-size: 13px; color: var(--text-mute); padding: 10px 0; }
+  .ppt-grp { margin-bottom: 14px; }
+  .ppt-grp-h { font-size: 13px; font-weight: 700; color: var(--text); padding-bottom: 6px;
+               border-bottom: 1px solid var(--line); margin-bottom: 8px; display: flex;
+               align-items: baseline; gap: 8px; }
+  .ppt-grp-h span { font-size: 11px; font-weight: 400; color: var(--text-mute); }
+  .ppt-grp-h.ppt-etc { color: #ffb454; }
+  .ppt-item { display: flex; align-items: flex-start; gap: 8px; font-size: 12.5px; color: var(--text-dim);
+              line-height: 1.6; padding: 3px 0; flex-wrap: wrap; }
+  .ppt-who { flex: none; min-width: 54px; font-weight: 700; color: var(--accent); }
+  .ppt-txt { flex: 1; min-width: 160px; }
+  .ppt-sel { flex: none; background: var(--deep-2); border: 1px solid var(--line); border-radius: 7px;
+             color: var(--text); font-family: var(--font-body); font-size: 11px; padding: 4px 6px; max-width: 170px; }
+  @media (max-width: 700px) {
+    .ppt-preview { max-height: 260px; }
+    .ppt-sel { max-width: 100%; width: 100%; }
+  }
 </style>
 </head>
 <body>
@@ -1242,6 +1276,7 @@
           <button id="wbNext" aria-label="다음 주">›</button>
           <button id="wbThis" class="cal-today-btn">이번 주</button>
         </div>
+        <button class="ppt-btn" id="wbPptBtn">임원보고 PPT</button>
       </div>
       <div id="wbList"><div class="loading">불러오는 중…</div></div>
     </main>
@@ -1639,6 +1674,47 @@
     <div class="modal-actions">
       <button class="btn-ghost" data-close="projModal">취소</button>
       <button class="btn-primary" id="pmSave">저장</button>
+    </div>
+  </div>
+</div>
+
+
+<!-- 임원보고 PPT 내보내기 모달 -->
+<div class="modal-bg" id="pptModal">
+  <div class="modal">
+    <div class="modal-h">
+      <h3>임원보고 PPT 내보내기</h3>
+      <button class="modal-x" data-close="pptModal">&times;</button>
+    </div>
+    <div class="field">
+      <label for="pptWeekSel">보고 대상 주차</label>
+      <div class="ppt-week-row">
+        <select id="pptWeekSel"></select>
+        <span class="ppt-week-info" id="pptWeekInfo">&mdash;</span>
+      </div>
+    </div>
+    <div class="field">
+      <label>포함할 슬라이드</label>
+      <div class="ppt-opts">
+        <label><input type="checkbox" id="pptOptSummary" checked> 프로젝트별 요약</label>
+        <label><input type="checkbox" id="pptOptDetail" checked> 프로젝트별 상세</label>
+        <label><input type="checkbox" id="pptOptEtc" checked> 기타 업무</label>
+        <label><input type="checkbox" id="pptOptTrip" checked> 출장/외근/연차</label>
+        <label><input type="checkbox" id="pptOptNote"> 특이사항</label>
+      </div>
+    </div>
+    <div class="field" id="pptNoteWrap" style="display:none;">
+      <label for="pptNoteTxt">특이사항 / 협조 요청 (한 줄에 하나씩)</label>
+      <textarea id="pptNoteTxt" rows="3" placeholder="예) 노이다 챔버 자재 입고 지연 - 영업팀 확인 요청"></textarea>
+    </div>
+    <div class="field">
+      <label>내용 확인 (미분류 업무는 프로젝트를 직접 지정하세요)</label>
+      <div class="ppt-preview" id="pptPreview"><div class="loading">불러오는 중&hellip;</div></div>
+    </div>
+    <div class="status" id="pptStatus"></div>
+    <div class="modal-actions">
+      <button class="btn-ghost" data-close="pptModal">닫기</button>
+      <button class="btn-primary" id="pptMake">PPT 다운로드</button>
     </div>
   </div>
 </div>
@@ -4483,6 +4559,407 @@
   $("wbPrev").addEventListener("click", () => { wbDate.setDate(wbDate.getDate() - 7); loadWeeklyBoard(); });
   $("wbNext").addEventListener("click", () => { wbDate.setDate(wbDate.getDate() + 7); loadWeeklyBoard(); });
   $("wbThis").addEventListener("click", () => { wbDate = new Date(); loadWeeklyBoard(); });
+
+  /* ─────────── 임원보고 PPT 내보내기 (차주 업무계획) ─────────── */
+  const PPTX_SRC = "https://cdn.jsdelivr.net/npm/pptxgenjs@3.12.0/dist/pptxgen.bundle.js";
+  let pptxLoader = null;
+  function loadPptxLib() {
+    if (window.PptxGenJS) return Promise.resolve();
+    if (pptxLoader) return pptxLoader;
+    pptxLoader = new Promise((res, rej) => {
+      const s = document.createElement("script");
+      s.src = PPTX_SRC;
+      s.onload = () => res();
+      s.onerror = () => { pptxLoader = null; rej(new Error("PPT 라이브러리를 불러오지 못했습니다. 인터넷 연결을 확인하세요.")); };
+      document.head.appendChild(s);
+    });
+    return pptxLoader;
+  }
+
+  const PPT_C = {
+    navy: "1E2E40", navy2: "2C4056", green: "36B97A", greenL: "E4F6EC",
+    text: "1B2B3A", dim: "62788D", line: "D6DEE7", soft: "F4F7FA",
+    white: "FFFFFF", warn: "C77700", sub: "A9C7D8"
+  };
+  const PPT_FONT = "맑은 고딕";
+  const PPT_STATUS = { wait: "대기", run: "진행중", done: "완료", late: "지연" };
+
+  let PPT_ROWS = [];     // {uid, who, rank, text, pid}
+  let PPT_TRIPS = [];    // {who, type, range, place}
+  let PPT_WEEK = null;   // {weekStr, mon, sun, label, range}
+
+  function pptNorm(s) { return (s || "").toLowerCase().replace(/[\s()\[\]{}·,._/\\-]/g, ""); }
+  function pptLines(txt) {
+    return (txt || "").split(/\r?\n/)
+      .map(s => s.replace(/^\s*[-•*·▶►✓o]\s+/, "").replace(/^\s*\d+[.)]\s*/, "").trim())
+      .filter(Boolean);
+  }
+  // 프로젝트명·고객사·프로젝트명 토큰을 검색 키로 (긴 키 우선 매칭)
+  // 여러 프로젝트가 공유하는 일반 단어(예: "챔버")와 범용어는 키에서 제외한다.
+  const PPT_STOPWORDS = new Set(["챔버", "설계", "프로젝트", "현장", "공사", "업무", "제작", "납품", "검토", "회의"]);
+  function pptProjectKeys() {
+    const base = (ALL_PROJECTS || []).map(p => {
+      const full = pptNorm(p.name);
+      const keys = new Set();
+      const add = v => { const k = pptNorm(v); if (k.length >= 2 && !PPT_STOPWORDS.has(k)) keys.add(k); };
+      add(p.name); add(p.client);
+      (p.name || "").split(/[\s\-_/·,()]+/).forEach(t => add(t));
+      return { p, full, keys };
+    });
+    const count = {};
+    base.forEach(g => g.keys.forEach(k => { count[k] = (count[k] || 0) + 1; }));
+    return base.map(g => ({
+      p: g.p,
+      keys: [...g.keys].filter(k => k === g.full || count[k] === 1).sort((a, b) => b.length - a.length),
+    }));
+  }
+  function pptMatch(line, pk) {
+    const n = pptNorm(line);
+    let best = null, len = 0;
+    pk.forEach(g => g.keys.forEach(k => { if (k.length > len && n.includes(k)) { best = g.p; len = k.length; } }));
+    return best;
+  }
+
+  // 해당 주차의 주간업무 + 출장/외근/연차 수집
+  async function pptCollect(weekStr) {
+    const mon = mondayOfWeek(weekStr);
+    const sun = new Date(mon); sun.setDate(mon.getDate() + 6);
+    let plans = [], trips = [];
+    if (DEMO_MODE) {
+      plans = (MY_WEEKLY_CACHE || []).filter(p => p.week === weekStr).slice();
+      if (weekStr === isoWeek(new Date())) {
+        Object.entries(DEMO_WEEKLY || {}).forEach(([uid, tasks]) => {
+          if (uid !== CURRENT_USER?.uid) plans.push({ uid, tasks });
+        });
+      }
+      Object.entries(DEMO_TRIPS || {}).forEach(([uid, list]) => (list || []).forEach(t => trips.push({ ...t, uid })));
+    } else if (!configMissing()) {
+      const [pl, tp] = await Promise.all([
+        safeGetDocs(query(collection(db, "weekly_plans"), where("week", "==", weekStr))),
+        safeGetDocs(collection(db, "trips")),
+      ]);
+      plans = pl || []; trips = tp || [];
+    }
+
+    const members = approvedMembers()
+      .filter(m => m.role !== "admin")
+      .slice().sort((a, b) => (RANK_ORDER[a.rank] || 9) - (RANK_ORDER[b.rank] || 9));
+    const pk = pptProjectKeys();
+    const rows = [];
+    members.forEach(m => {
+      const uid = m.id || m.uid;
+      const pl = plans.find(p => p.uid === uid);
+      pptLines(weeklyText(pl)).forEach(text => {
+        const hit = pptMatch(text, pk);
+        rows.push({ uid, who: m.name || m.email || "팀원", rank: m.rank || "", text, pid: hit ? hit.id : "" });
+      });
+    });
+
+    const tripRows = [];
+    trips.forEach(t => {
+      const s = toDateObj(t.start); if (!s) return;
+      const e = t.end ? toDateObj(t.end) : s;
+      if (!(e >= mon && s <= sun)) return;
+      if (!isActiveMember(t.uid)) return;
+      tripRows.push({ who: memberName(t.uid), type: t.type || "출장", range: fmtTripRange(t), place: t.place || "", sort: s.getTime() });
+    });
+    tripRows.sort((a, b) => a.sort - b.sort);
+
+    PPT_ROWS = rows;
+    PPT_TRIPS = tripRows;
+    PPT_WEEK = {
+      weekStr, mon, sun,
+      label: weekLabelText(mon),
+      range: `${mon.getFullYear()}. ${mon.getMonth() + 1}. ${mon.getDate()} ~ ${sun.getMonth() + 1}. ${sun.getDate()}`
+    };
+  }
+
+  function pptGroups() {
+    const map = new Map();
+    PPT_ROWS.forEach(r => {
+      const key = r.pid || "__etc";
+      if (!map.has(key)) {
+        map.set(key, { p: (ALL_PROJECTS || []).find(x => x.id === r.pid) || null, items: [] });
+      }
+      map.get(key).items.push(r);
+    });
+    const projects = [...map.entries()].filter(e => e[0] !== "__etc").map(e => e[1]);
+    projects.sort((a, b) => {
+      const da = toDateObj(a.p && a.p.dueDate); const dbb = toDateObj(b.p && b.p.dueDate);
+      return (da ? da.getTime() : Infinity) - (dbb ? dbb.getTime() : Infinity);
+    });
+    const etc = map.get("__etc");
+    return { projects, etc: etc ? etc.items : [] };
+  }
+
+  function pptChunk(arr, n) {
+    const out = [];
+    for (let i = 0; i < arr.length; i += n) out.push(arr.slice(i, i + n));
+    return out;
+  }
+
+  /* ── 미리보기 (프로젝트 매칭 확인/수정) ── */
+  function renderPptPreview() {
+    const box = $("pptPreview");
+    if (!box) return;
+    const { projects, etc } = pptGroups();
+    const opts = [`<option value="">기타 업무</option>`].concat(
+      (ALL_PROJECTS || []).map(p => `<option value="${esc(p.id)}">${esc(p.name)}</option>`)
+    ).join("");
+    let html = `<div class="ppt-sum">프로젝트 <b>${projects.length}</b>건 · 업무 <b>${PPT_ROWS.length}</b>건 · 미분류 <b>${etc.length}</b>건 · 출장/외근/연차 <b>${PPT_TRIPS.length}</b>건</div>`;
+    if (!PPT_ROWS.length) html += `<div class="ppt-none">해당 주차에 작성된 주간업무가 없습니다.</div>`;
+    projects.forEach(g => {
+      html += `<div class="ppt-grp">
+        <div class="ppt-grp-h">${esc(g.p ? g.p.name : "프로젝트")}<span>${esc(g.p && g.p.client ? g.p.client : "")}</span></div>
+        ${g.items.map(r => `<div class="ppt-item"><span class="ppt-who">${esc(r.who)}</span><span class="ppt-txt">${esc(r.text)}</span></div>`).join("")}
+      </div>`;
+    });
+    if (etc.length) {
+      html += `<div class="ppt-grp">
+        <div class="ppt-grp-h ppt-etc">미분류 업무<span>프로젝트를 직접 지정할 수 있습니다</span></div>
+        ${etc.map(r => {
+          const i = PPT_ROWS.indexOf(r);
+          return `<div class="ppt-item"><span class="ppt-who">${esc(r.who)}</span><span class="ppt-txt">${esc(r.text)}</span>
+            <select class="ppt-sel" data-idx="${i}">${opts}</select></div>`;
+        }).join("")}
+      </div>`;
+    }
+    box.innerHTML = html;
+    box.querySelectorAll(".ppt-sel").forEach(sel => {
+      sel.addEventListener("change", () => {
+        const i = +sel.dataset.idx;
+        if (PPT_ROWS[i]) PPT_ROWS[i].pid = sel.value;
+        renderPptPreview();
+      });
+    });
+  }
+
+  async function reloadPptData() {
+    const box = $("pptPreview");
+    if (box) box.innerHTML = `<div class="loading">불러오는 중…</div>`;
+    const base = new Date(wbDate);
+    if ($("pptWeekSel").value !== "this") base.setDate(base.getDate() + 7);
+    await pptCollect(isoWeek(base));
+    $("pptWeekInfo").textContent = PPT_WEEK.label;
+    renderPptPreview();
+  }
+
+  async function openPptModal() {
+    const nd = new Date(wbDate); nd.setDate(nd.getDate() + 7);
+    $("pptWeekSel").innerHTML =
+      `<option value="next">차주 (${weekRangeShort(nd)})</option>` +
+      `<option value="this">금주 (${weekRangeShort(wbDate)})</option>`;
+    $("pptStatus").textContent = "";
+    $("pptStatus").className = "status";
+    openModal("pptModal");
+    try { loadPptxLib(); } catch (e) {}
+    await reloadPptData();
+  }
+
+  /* ── 슬라이드 공통 ── */
+  function pptHead(pptx, slide, title, sub) {
+    slide.addShape(pptx.ShapeType.rect, { x: 0, y: 0, w: 10, h: 0.88, fill: { color: PPT_C.navy } });
+    slide.addShape(pptx.ShapeType.rect, { x: 0, y: 0.88, w: 10, h: 0.055, fill: { color: PPT_C.green } });
+    slide.addText(title, { x: 0.45, y: 0.12, w: 6.6, h: 0.64, fontSize: 19, bold: true, color: PPT_C.white, fontFace: PPT_FONT, valign: "middle" });
+    if (sub) slide.addText(sub, { x: 6.9, y: 0.12, w: 2.65, h: 0.64, fontSize: 10.5, color: PPT_C.sub, align: "right", fontFace: PPT_FONT, valign: "middle" });
+  }
+  function pptFoot(slide, page) {
+    slide.addText("ERETEC · 전자파 솔루션 1사업부 설계팀", { x: 0.45, y: 5.22, w: 6, h: 0.28, fontSize: 8.5, color: PPT_C.dim, fontFace: PPT_FONT });
+    slide.addText(String(page), { x: 8.9, y: 5.22, w: 0.65, h: 0.28, fontSize: 8.5, color: PPT_C.dim, align: "right", fontFace: PPT_FONT });
+  }
+  function pptDue(p) {
+    const d = toDateObj(p && p.dueDate);
+    if (!d) return "-";
+    return `${d.getFullYear()}.${String(d.getMonth() + 1).padStart(2, "0")}.${String(d.getDate()).padStart(2, "0")}`;
+  }
+
+  /* ── PPT 생성 ── */
+  async function buildPpt() {
+    await loadPptxLib();
+    const pptx = new PptxGenJS();
+    pptx.layout = "LAYOUT_16x9";
+    pptx.author = "ERETEC 전자파 솔루션 1사업부 설계팀";
+    pptx.company = "ERETEC Inc.";
+    pptx.title = `설계팀 업무계획 보고 (${PPT_WEEK.range})`;
+
+    const { projects, etc } = pptGroups();
+    const wantSummary = $("pptOptSummary").checked;
+    const wantDetail  = $("pptOptDetail").checked;
+    const wantEtc     = $("pptOptEtc").checked;
+    const wantTrip    = $("pptOptTrip").checked;
+    const wantNote    = $("pptOptNote").checked;
+    const today = new Date();
+    const todayStr = `${today.getFullYear()}.${String(today.getMonth() + 1).padStart(2, "0")}.${String(today.getDate()).padStart(2, "0")}`;
+    let page = 1;
+
+    /* 1. 표지 */
+    const cover = pptx.addSlide();
+    cover.background = { color: PPT_C.navy };
+    cover.addShape(pptx.ShapeType.rect, { x: 0.7, y: 1.72, w: 1.15, h: 0.08, fill: { color: PPT_C.green } });
+    cover.addText("설계팀 업무계획 보고", { x: 0.7, y: 1.95, w: 8.6, h: 0.75, fontSize: 34, bold: true, color: PPT_C.white, fontFace: PPT_FONT });
+    cover.addText(`${PPT_WEEK.label}   ·   ${PPT_WEEK.range}`, { x: 0.7, y: 2.78, w: 8.6, h: 0.4, fontSize: 15, color: PPT_C.green, fontFace: PPT_FONT });
+    cover.addText("전자파 솔루션 1사업부 설계팀", { x: 0.7, y: 4.32, w: 5, h: 0.32, fontSize: 12.5, color: PPT_C.white, fontFace: PPT_FONT });
+    cover.addText(`ERETEC Inc.   |   작성일 ${todayStr}`, { x: 0.7, y: 4.66, w: 5, h: 0.3, fontSize: 10.5, color: PPT_C.sub, fontFace: PPT_FONT });
+
+    /* 2. 프로젝트별 요약 */
+    if (wantSummary && projects.length) {
+      const chunks = pptChunk(projects, 8);
+      chunks.forEach((ck, ci) => {
+        page++;
+        const s = pptx.addSlide();
+        pptHead(pptx, s, "프로젝트별 업무 요약" + (chunks.length > 1 ? ` (${ci + 1}/${chunks.length})` : ""), PPT_WEEK.range);
+        const head = ["프로젝트", "고객사", "상태", "납기", "진행률", "업무"].map(t => ({
+          text: t, options: { bold: true, color: PPT_C.white, fill: { color: PPT_C.navy2 }, align: "center" }
+        }));
+        const body = ck.map(g => {
+          const p = g.p || {};
+          const who = [...new Set(g.items.map(r => r.who))].join(", ");
+          return [
+            { text: p.name || "-", options: { bold: true } },
+            { text: p.client || "-", options: { align: "center" } },
+            { text: PPT_STATUS[p.status] || "-", options: { align: "center", color: p.status === "late" ? PPT_C.warn : PPT_C.text } },
+            { text: pptDue(p), options: { align: "center" } },
+            { text: p.id ? `${autoProgress(p)}%` : "-", options: { align: "center" } },
+            { text: `${g.items.length}건 · ${who}`, options: { fontSize: 9.5, color: PPT_C.dim } },
+          ];
+        });
+        s.addTable([head, ...body], {
+          x: 0.45, y: 1.25, w: 9.1, colW: [2.55, 1.15, 0.8, 1.15, 0.8, 2.65],
+          rowH: 0.36, fontSize: 10.5, fontFace: PPT_FONT, color: PPT_C.text,
+          valign: "middle", border: { pt: 0.5, color: PPT_C.line },
+          fill: { color: PPT_C.white },
+        });
+        pptFoot(s, page);
+      });
+    }
+
+    /* 3. 프로젝트별 상세 */
+    if (wantDetail) {
+      projects.forEach(g => {
+        const p = g.p || {};
+        pptChunk(g.items, 7).forEach((ck, ci, all) => {
+          page++;
+          const s = pptx.addSlide();
+          pptHead(pptx, s, p.name || "프로젝트", `${PPT_WEEK.range}${all.length > 1 ? `  (${ci + 1}/${all.length})` : ""}`);
+          // 프로젝트 정보 바
+          s.addShape(pptx.ShapeType.rect, { x: 0.45, y: 1.2, w: 9.1, h: 0.58, fill: { color: PPT_C.soft }, line: { color: PPT_C.line, pt: 0.5 } });
+          s.addShape(pptx.ShapeType.rect, { x: 0.45, y: 1.2, w: 0.07, h: 0.58, fill: { color: PPT_C.green } });
+          s.addText([
+            { text: `고객사 `, options: { color: PPT_C.dim } }, { text: `${p.client || "-"}`, options: { bold: true } },
+            { text: `     상태 `, options: { color: PPT_C.dim } }, { text: `${PPT_STATUS[p.status] || "-"}`, options: { bold: true, color: p.status === "late" ? PPT_C.warn : PPT_C.text } },
+            { text: `     납기 `, options: { color: PPT_C.dim } }, { text: `${pptDue(p)}`, options: { bold: true } },
+            { text: `     진행률 `, options: { color: PPT_C.dim } }, { text: `${p.id ? autoProgress(p) + "%" : "-"}`, options: { bold: true, color: PPT_C.green } },
+          ], { x: 0.72, y: 1.2, w: 8.7, h: 0.58, fontSize: 11, fontFace: PPT_FONT, color: PPT_C.text, valign: "middle" });
+
+          const y0 = 2.0, rh = 0.44;
+          ck.forEach((r, i) => {
+            const y = y0 + i * rh;
+            s.addShape(pptx.ShapeType.rect, { x: 0.5, y: y + 0.16, w: 0.08, h: 0.08, fill: { color: PPT_C.green } });
+            s.addText([
+              { text: `${r.who}${r.rank ? " " + r.rank : ""}`, options: { bold: true, color: PPT_C.navy } },
+              { text: "   " + r.text, options: { color: PPT_C.text } },
+            ], { x: 0.72, y, w: 8.7, h: rh - 0.04, fontSize: 11.5, fontFace: PPT_FONT, valign: "middle", fit: "shrink" });
+          });
+          pptFoot(s, page);
+        });
+      });
+    }
+
+    /* 4. 기타(미분류) 업무 */
+    if (wantEtc && etc.length) {
+      pptChunk(etc, 9).forEach((ck, ci, all) => {
+        page++;
+        const s = pptx.addSlide();
+        pptHead(pptx, s, "기타 업무" + (all.length > 1 ? ` (${ci + 1}/${all.length})` : ""), PPT_WEEK.range);
+        const y0 = 1.35, rh = 0.42;
+        ck.forEach((r, i) => {
+          const y = y0 + i * rh;
+          s.addShape(pptx.ShapeType.rect, { x: 0.5, y: y + 0.16, w: 0.08, h: 0.08, fill: { color: PPT_C.green } });
+          s.addText([
+            { text: `${r.who}${r.rank ? " " + r.rank : ""}`, options: { bold: true, color: PPT_C.navy } },
+            { text: "   " + r.text, options: { color: PPT_C.text } },
+          ], { x: 0.72, y, w: 8.7, h: rh - 0.04, fontSize: 11.5, fontFace: PPT_FONT, valign: "middle", fit: "shrink" });
+        });
+        pptFoot(s, page);
+      });
+    }
+
+    /* 5. 출장 / 외근 / 연차 */
+    if (wantTrip && PPT_TRIPS.length) {
+      pptChunk(PPT_TRIPS, 9).forEach((ck, ci, all) => {
+        page++;
+        const s = pptx.addSlide();
+        pptHead(pptx, s, "출장 · 외근 · 연차 현황" + (all.length > 1 ? ` (${ci + 1}/${all.length})` : ""), PPT_WEEK.range);
+        const head = ["구분", "성명", "기간", "장소 / 내용"].map(t => ({
+          text: t, options: { bold: true, color: PPT_C.white, fill: { color: PPT_C.navy2 }, align: "center" }
+        }));
+        const body = ck.map(t => ([
+          { text: t.type, options: { align: "center", bold: true } },
+          { text: t.who, options: { align: "center" } },
+          { text: t.range, options: { align: "center" } },
+          { text: t.place || "-" },
+        ]));
+        s.addTable([head, ...body], {
+          x: 0.45, y: 1.25, w: 9.1, colW: [1.1, 1.6, 1.5, 4.9],
+          rowH: 0.36, fontSize: 11, fontFace: PPT_FONT, color: PPT_C.text,
+          valign: "middle", border: { pt: 0.5, color: PPT_C.line }, fill: { color: PPT_C.white },
+        });
+        pptFoot(s, page);
+      });
+    }
+
+    /* 6. 특이사항 / 협조 요청 */
+    if (wantNote) {
+      page++;
+      const s = pptx.addSlide();
+      pptHead(pptx, s, "특이사항 및 협조 요청", PPT_WEEK.range);
+      const memo = ($("pptNoteTxt").value || "").trim();
+      if (memo) {
+        pptLines(memo).forEach((line, i) => {
+          const y = 1.45 + i * 0.44;
+          if (y > 5.0) return;
+          s.addShape(pptx.ShapeType.rect, { x: 0.5, y: y + 0.16, w: 0.08, h: 0.08, fill: { color: PPT_C.green } });
+          s.addText(line, { x: 0.72, y, w: 8.7, h: 0.4, fontSize: 12.5, fontFace: PPT_FONT, color: PPT_C.text, valign: "middle", fit: "shrink" });
+        });
+      } else {
+        s.addText("(회의 시 구두 보고)", { x: 0.72, y: 1.5, w: 8.7, h: 0.4, fontSize: 12, fontFace: PPT_FONT, color: PPT_C.dim });
+      }
+      pptFoot(s, page);
+    }
+
+    const mon = PPT_WEEK.mon;
+    const fname = `설계팀_업무계획보고_${mon.getFullYear()}${String(mon.getMonth() + 1).padStart(2, "0")}${String(mon.getDate()).padStart(2, "0")}.pptx`;
+    await pptx.writeFile({ fileName: fname });
+    return fname;
+  }
+
+  /* ── 이벤트 바인딩 ── */
+  const wbPptBtn = $("wbPptBtn");
+  if (wbPptBtn) wbPptBtn.addEventListener("click", () => { openPptModal(); });
+  const pptWeekSel = $("pptWeekSel");
+  if (pptWeekSel) pptWeekSel.addEventListener("change", () => { reloadPptData(); });
+  const pptOptNote = $("pptOptNote");
+  if (pptOptNote) pptOptNote.addEventListener("change", () => {
+    $("pptNoteWrap").style.display = pptOptNote.checked ? "" : "none";
+  });
+  const pptMake = $("pptMake");
+  if (pptMake) pptMake.addEventListener("click", async () => {
+    const st = $("pptStatus");
+    if (!PPT_ROWS.length && !PPT_TRIPS.length) {
+      st.className = "status show err"; st.textContent = "내보낼 업무 내용이 없습니다.";
+      return;
+    }
+    pptMake.disabled = true; pptMake.textContent = "생성 중…";
+    st.className = "status show"; st.textContent = "슬라이드를 만드는 중입니다…";
+    try {
+      const f = await buildPpt();
+      st.className = "status show ok"; st.textContent = `${f} 다운로드 완료`;
+    } catch (e) {
+      st.className = "status show err"; st.textContent = "생성 실패: " + (e.message || e);
+    } finally {
+      pptMake.disabled = false; pptMake.textContent = "PPT 다운로드";
+    }
+  });
 
   /* ─── 프로젝트 생성/수정 (관리자) ─── */
   let editingProjectId = null;
